@@ -10,6 +10,6 @@ Hệ thống quản trị tập trung (CMS), Backend API và Realtime WebSocket 
 
 ## Tech Stack
 - **Framework:** Laravel 13 (PHP 8.4)
-- **Database:** PostgreSQL / MySQL, Redis
-- **Realtime:** Laravel Reverb / Pusher Protocol
-- **Auth & Permissions:** Laravel Sanctum / Spatie Permission
+- **Database:** MySQL, Redis
+- **Realtime:** Laravel Reverb
+- **Auth & Permissions:** Laravel Sanctum & Spatie Permission
