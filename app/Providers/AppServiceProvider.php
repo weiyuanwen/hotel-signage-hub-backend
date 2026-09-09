@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Hotel;
 use App\Models\User;
+use App\Observers\HotelObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -18,6 +20,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Hotel::observe(HotelObserver::class);
+
         Gate::before(function ($user, string $ability) {
             return $user instanceof User && $user->hasRole('super-admin') ? true : null;
         });

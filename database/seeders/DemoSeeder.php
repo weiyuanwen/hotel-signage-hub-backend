@@ -28,6 +28,8 @@ class DemoSeeder extends Seeder
             ],
         );
 
+        app(\App\Domains\Content\WelcomeTemplateCatalog::class)->syncHotel($hotel);
+
         foreach (['101', '102', '201', 'Lobby'] as $code) {
             Room::query()->updateOrCreate(
                 ['hotel_id' => $hotel->id, 'code' => $code],

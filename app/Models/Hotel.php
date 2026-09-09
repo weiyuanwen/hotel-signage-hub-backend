@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'slug', 'timezone', 'default_locale', 'is_active', 'logo_media_id', 'default_media_id'])]
+#[Fillable(['name', 'slug', 'timezone', 'default_locale', 'is_active', 'logo_media_id', 'default_media_id', 'default_welcome_template_key'])]
 class Hotel extends Model
 {
     /** @use HasFactory<HotelFactory> */
@@ -48,5 +48,10 @@ class Hotel extends Model
     public function defaultMedia(): BelongsTo
     {
         return $this->belongsTo(MediaAsset::class, 'default_media_id');
+    }
+
+    public function welcomeTemplates(): HasMany
+    {
+        return $this->hasMany(HotelWelcomeTemplate::class);
     }
 }

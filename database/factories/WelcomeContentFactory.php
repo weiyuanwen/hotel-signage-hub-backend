@@ -23,6 +23,7 @@ class WelcomeContentFactory extends Factory
             'source' => 'manual',
             'is_current' => true,
             'checked_in_at' => now(),
+            'template_key' => 'dusk',
         ];
     }
 }

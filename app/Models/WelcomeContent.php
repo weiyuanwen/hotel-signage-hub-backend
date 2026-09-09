@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'checked_out_at',
     'created_by',
     'updated_by',
+    'template_key',
 ])]
 class WelcomeContent extends Model
 {
