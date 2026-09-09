@@ -25,6 +25,8 @@ Route::prefix('cms')->group(function () {
             Route::get('rooms', [RoomController::class, 'index']);
             Route::post('rooms', [RoomController::class, 'store']);
             Route::get('welcome-templates', [WelcomeTemplateController::class, 'index']);
+            Route::patch('welcome-templates/default', [WelcomeTemplateController::class, 'updateDefault']);
+            Route::patch('welcome-templates/{template}', [WelcomeTemplateController::class, 'update']);
             Route::post('rooms/{room}/check-in', [StayController::class, 'checkIn']);
             Route::post('rooms/{room}/checkout', [StayController::class, 'checkout']);
             Route::patch('rooms/{room}/welcome', [StayController::class, 'update']);
