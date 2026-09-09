@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Cms\PairingClaimController;
 use App\Http\Controllers\Api\Cms\RoomController;
 use App\Http\Controllers\Api\Cms\StaffController;
 use App\Http\Controllers\Api\Cms\StayController;
+use App\Http\Controllers\Api\Cms\WelcomeTemplateController;
 use App\Http\Controllers\Api\Device\HeartbeatController;
 use App\Http\Controllers\Api\Device\PairingController;
 use App\Http\Controllers\Api\Device\ScreenController;
@@ -23,6 +24,7 @@ Route::prefix('cms')->group(function () {
         Route::prefix('hotels/{hotel}')->middleware('hotel.scope')->group(function () {
             Route::get('rooms', [RoomController::class, 'index']);
             Route::post('rooms', [RoomController::class, 'store']);
+            Route::get('welcome-templates', [WelcomeTemplateController::class, 'index']);
             Route::post('rooms/{room}/check-in', [StayController::class, 'checkIn']);
             Route::post('rooms/{room}/checkout', [StayController::class, 'checkout']);
             Route::patch('rooms/{room}/welcome', [StayController::class, 'update']);
