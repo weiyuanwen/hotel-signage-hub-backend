@@ -1,15 +1,28 @@
-# Hotel Signage Hub - Backend & CMS
+# Hotel Signage Hub - Backend & CMS API
 
-Hệ thống quản trị tập trung (CMS), Backend API và Realtime WebSocket Server phục vụ quản lý màn hình chào mừng / bảng hiệu kỹ thuật số (Digital Signage) đa khách sạn (Multi-tenant).
+Hệ thống quản trị tập trung (REST API) và Realtime WebSocket Server phục vụ Digital Signage đa khách sạn.
 
-## Tính năng chính
-- **Multi-tenancy Architecture:** Quản lý phân cấp Super Admin -> Khách sạn -> Phòng/Khu vực -> Màn hình TV.
-- **Quản lý nội dung (CMS):** Cập nhật thông tin khách lưu trú, thông điệp chào mừng, playlist hình ảnh/video theo từng phòng hoặc toàn hệ thống.
-- **Real-time Broadcasting:** Đồng bộ và đẩy nội dung cập nhật tức thì tới hàng nghìn thiết bị TV thông qua WebSocket (Laravel Reverb).
-- **Device Pairing & Telemetry:** Cơ chế ghép nối thiết bị qua mã PIN ngắn hạn và theo dõi trạng thái online/offline (Heartbeat).
+## Tính năng
 
-## Tech Stack
-- **Framework:** Laravel 13 (PHP 8.4)
-- **Database:** MySQL, Redis
-- **Realtime:** Laravel Reverb
-- **Auth & Permissions:** Laravel Sanctum & Spatie Permission
+- Multi-tenancy: Super Admin → Hotel → Room/Area → Device
+- CMS API: check-in / checkout / đổi tên khách, branding phòng trống
+- Pairing PIN (TV hiện mã, lễ tân claim trên CMS)
+- Heartbeat qua cache (không ghi MySQL mỗi nhịp)
+- Reverb: `private-room.{hotel_id}.{room_id}` và `private-device.{device_id}`
+
+## Tech stack
+
+Laravel 13 (PHP 8.4+), MySQL, Redis, Reverb, Sanctum, Spatie Permission
+
+## Setup
+
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
+php artisan db:seed
+php artisan test
+```
+
+Spec: `docs/superpowers/specs/2026-09-09-hotel-signage-hub-backend-design.md`
