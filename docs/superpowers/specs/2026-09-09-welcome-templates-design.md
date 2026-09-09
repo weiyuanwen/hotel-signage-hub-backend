@@ -60,7 +60,7 @@ Cảnh đêm boutique, gần DESIGN.md player hiện tại. Nền gần đen chr
 --accent: oklch(0.62 0.07 230);
 ```
 
-Bố cục editorial trái: logo + tên KS trên cùng trái; tên khách + thông điệp khối giữa trái (`max-w-[18ch]` tên); mã phòng dưới cùng trái (hoặc phải, tracking `0.18em`, `--accent`). Motion: tên trượt lên 12px + fade.
+Bố cục editorial trái: logo + tên KS trên cùng trái; tên khách + thông điệp khối giữa trái (`max-w-[18ch]` tên); mã phòng dưới cùng trái, tracking `0.18em`, `--accent`. Motion: tên trượt lên 12px + fade.
 
 ### 2. `linen` — Sáng nhẹ
 
