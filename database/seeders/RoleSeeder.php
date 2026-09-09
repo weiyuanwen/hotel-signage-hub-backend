@@ -17,6 +17,8 @@ class RoleSeeder extends Seeder
         'stays.manage',
         'devices.pair',
         'devices.manage',
+        'staff.view',
+        'staff.manage',
     ];
 
     public function run(): void
@@ -24,21 +26,28 @@ class RoleSeeder extends Seeder
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         foreach (self::PERMISSIONS as $name) {
-            Permission::findOrCreate($name, 'web');
+            Permission::query()->firstOrCreate([
+                'name' => $name,
+                'guard_name' => 'web',
+            ]);
         }
 
-        Role::findOrCreate('super-admin', 'web')->givePermissionTo(self::PERMISSIONS);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        Role::findOrCreate('hotel-manager', 'web')->givePermissionTo([
+        Role::findOrCreate('super-admin', 'web')->syncPermissions(self::PERMISSIONS);
+
+        Role::findOrCreate('hotel-manager', 'web')->syncPermissions([
             'hotels.view',
             'rooms.view',
             'rooms.manage',
             'stays.manage',
             'devices.pair',
             'devices.manage',
+            'staff.view',
+            'staff.manage',
         ]);
 
-        Role::findOrCreate('receptionist', 'web')->givePermissionTo([
+        Role::findOrCreate('receptionist', 'web')->syncPermissions([
             'hotels.view',
             'rooms.view',
             'stays.manage',

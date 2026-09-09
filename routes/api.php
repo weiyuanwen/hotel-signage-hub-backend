@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Cms\DeviceAdminController;
 use App\Http\Controllers\Api\Cms\HotelController;
 use App\Http\Controllers\Api\Cms\PairingClaimController;
 use App\Http\Controllers\Api\Cms\RoomController;
+use App\Http\Controllers\Api\Cms\StaffController;
 use App\Http\Controllers\Api\Cms\StayController;
 use App\Http\Controllers\Api\Device\HeartbeatController;
 use App\Http\Controllers\Api\Device\PairingController;
@@ -28,6 +29,9 @@ Route::prefix('cms')->group(function () {
             Route::post('pairing-codes/claim', [PairingClaimController::class, 'store']);
             Route::get('devices', [DeviceAdminController::class, 'index']);
             Route::post('devices/{device}/unpair', [DeviceAdminController::class, 'unpair']);
+            Route::get('staff', [StaffController::class, 'index']);
+            Route::post('staff', [StaffController::class, 'store']);
+            Route::patch('staff/{user}', [StaffController::class, 'update']);
         });
     });
 });

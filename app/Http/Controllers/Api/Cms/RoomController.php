@@ -7,6 +7,7 @@ use App\Models\Hotel;
 use App\Models\Room;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class RoomController extends Controller
 {
@@ -25,7 +26,7 @@ class RoomController extends Controller
         abort_unless($request->user()?->can('rooms.manage'), 403);
 
         $data = $request->validate([
-            'code' => ['required', 'string', 'max:32'],
+            'code' => ['required', 'string', 'max:32', Rule::unique('rooms', 'code')->where('hotel_id', $hotel->id)],
             'name' => ['nullable', 'string', 'max:255'],
             'kind' => ['nullable', 'in:guest,public'],
         ]);

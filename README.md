@@ -16,13 +16,16 @@ Laravel 13 (PHP 8.4+), MySQL, Redis, Reverb, Sanctum, Spatie Permission
 
 ## Setup
 
+Local qua Laravel Herd, domain **http://hubback.test/** (không dùng `artisan serve` mặc định).
+
 ```bash
 composer install
 cp .env.example .env
 php artisan key:generate
-php artisan migrate
-php artisan db:seed
+php artisan migrate --seed
 php artisan test
 ```
+
+`APP_URL=http://hubback.test`. CMS gọi `http://hubback.test/api`.
 
 Spec: `docs/superpowers/specs/2026-09-09-hotel-signage-hub-backend-design.md`
