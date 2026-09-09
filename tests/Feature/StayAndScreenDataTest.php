@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Domains\Realtime\Events\RoomContentUpdated;
 use App\Models\Hotel;
+use App\Models\HotelWelcomeTemplate;
 use App\Models\MediaAsset;
 use App\Models\Room;
 use App\Models\WelcomeContent;
@@ -34,7 +35,8 @@ class StayAndScreenDataTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.guest_display_name', 'Nguyen Van A')
             ->assertJsonPath('data.source', 'manual')
-            ->assertJsonPath('data.is_current', true);
+            ->assertJsonPath('data.is_current', true)
+            ->assertJsonPath('data.template_key', 'dusk');
 
         $room->refresh();
         $this->assertSame(1, $room->content_revision);
@@ -119,6 +121,7 @@ class StayAndScreenDataTest extends TestCase
         $this->getJson('/api/device/screen')
             ->assertOk()
             ->assertJsonPath('guest', null)
+            ->assertJsonPath('template', null)
             ->assertJsonPath('hotel.name', $hotel->name)
             ->assertJsonPath('room.kind', 'guest')
             ->assertHeader('ETag');
@@ -148,5 +151,131 @@ class StayAndScreenDataTest extends TestCase
         $this->postJson("/api/cms/hotels/{$hotelA->id}/rooms/{$roomB->id}/check-in", [
             'guest_display_name' => 'Nope',
         ])->assertNotFound();
+    }
+
+    public function test_check_in_stores_explicit_template_and_screen_payload(): void
+    {
+        Event::fake([RoomContentUpdated::class]);
+
+        $hotel = Hotel::factory()->create();
+        $room = Room::factory()->create(['hotel_id' => $hotel->id]);
+        $device = \App\Models\Device::factory()->paired($hotel, $room)->create();
+        Sanctum::actingAs($this->staff('receptionist', $hotel));
+
+        $this->postJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/check-in", [
+            'guest_display_name' => 'Mai',
+            'template_key' => 'linen',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.template_key', 'linen');
+
+        Event::assertDispatched(RoomContentUpdated::class, function (RoomContentUpdated $event) {
+            return ($event->payload['template']['key'] ?? null) === 'linen'
+                && $event->payload['guest']['display_name'] === 'Mai';
+        });
+
+        Sanctum::actingAs($device);
+        $this->getJson('/api/device/screen')
+            ->assertOk()
+            ->assertJsonPath('template.key', 'linen')
+            ->assertJsonPath('guest.display_name', 'Mai');
+    }
+
+    public function test_check_in_rejects_disabled_template_and_creates_no_stay(): void
+    {
+        $hotel = Hotel::factory()->create();
+        HotelWelcomeTemplate::query()
+            ->where('hotel_id', $hotel->id)
+            ->where('template_key', 'garden')
+            ->update(['is_enabled' => false]);
+        $room = Room::factory()->create(['hotel_id' => $hotel->id]);
+        Sanctum::actingAs($this->staff('receptionist', $hotel));
+
+        $this->postJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/check-in", [
+            'guest_display_name' => 'Mai',
+            'template_key' => 'garden',
+        ])->assertStatus(422);
+
+        $this->assertDatabaseCount('welcome_contents', 0);
+        $this->assertNull($room->fresh()->current_welcome_id);
+    }
+
+    public function test_update_welcome_changes_template_but_keeps_disabled_current(): void
+    {
+        Event::fake([RoomContentUpdated::class]);
+        $hotel = Hotel::factory()->create();
+        $room = Room::factory()->create(['hotel_id' => $hotel->id]);
+        $user = $this->staff('receptionist', $hotel);
+        Sanctum::actingAs($user);
+
+        $this->postJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/check-in", [
+            'guest_display_name' => 'Mai',
+            'template_key' => 'garden',
+        ])->assertCreated();
+
+        HotelWelcomeTemplate::query()
+            ->where('hotel_id', $hotel->id)
+            ->where('template_key', 'garden')
+            ->update(['is_enabled' => false]);
+
+        $this->patchJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/welcome", [
+            'guest_display_name' => 'Mai Lan',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.template_key', 'garden');
+
+        $this->patchJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/welcome", [
+            'template_key' => 'garden',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.template_key', 'garden');
+
+        $this->patchJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/welcome", [
+            'template_key' => 'stone',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.template_key', 'stone');
+
+        HotelWelcomeTemplate::query()
+            ->where('hotel_id', $hotel->id)
+            ->where('template_key', 'linen')
+            ->update(['is_enabled' => false]);
+
+        $this->patchJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/welcome", [
+            'template_key' => 'linen',
+        ])->assertStatus(422);
+    }
+
+    public function test_checkout_screen_has_null_template(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $room = Room::factory()->create(['hotel_id' => $hotel->id]);
+        $device = \App\Models\Device::factory()->paired($hotel, $room)->create();
+        Sanctum::actingAs($this->staff('receptionist', $hotel));
+
+        $this->postJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/check-in", [
+            'guest_display_name' => 'Mai',
+            'template_key' => 'harbor',
+        ])->assertCreated();
+
+        $this->postJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/checkout")->assertOk();
+
+        Sanctum::actingAs($device);
+        $this->getJson('/api/device/screen')
+            ->assertOk()
+            ->assertJsonPath('guest', null)
+            ->assertJsonPath('template', null);
+    }
+
+    public function test_check_in_unknown_template_key_is_rejected(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $room = Room::factory()->create(['hotel_id' => $hotel->id]);
+        Sanctum::actingAs($this->staff('receptionist', $hotel));
+
+        $this->postJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/check-in", [
+            'guest_display_name' => 'Mai',
+            'template_key' => 'neon',
+        ])->assertStatus(422);
     }
 }

@@ -55,6 +55,9 @@ class ScreenDataBuilder
                 'message' => $stay->message,
                 'locale' => $stay->locale,
             ] : null,
+            'template' => $stay ? [
+                'key' => $stay->template_key,
+            ] : null,
             'media' => [
                 'background_url' => $media instanceof MediaAsset ? $media->url() : null,
             ],

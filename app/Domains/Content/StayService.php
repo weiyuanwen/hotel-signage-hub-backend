@@ -4,6 +4,7 @@ namespace App\Domains\Content;
 
 use App\Domains\Device\ScreenDataBuilder;
 use App\Domains\Realtime\Events\RoomContentUpdated;
+use App\Models\Hotel;
 use App\Models\Room;
 use App\Models\User;
 use App\Models\WelcomeContent;
@@ -15,7 +16,7 @@ class StayService
     public function __construct(private ScreenDataBuilder $screenData) {}
 
     /**
-     * @param  array{guest_display_name: string, message?: ?string, locale?: ?string, source?: ?string, external_ref?: ?string}  $data
+     * @param  array{guest_display_name: string, message?: ?string, locale?: ?string, source?: ?string, external_ref?: ?string, template_key?: ?string}  $data
      */
     public function checkIn(Room $room, User $actor, array $data): WelcomeContent
     {
@@ -23,6 +24,12 @@ class StayService
 
         return DB::transaction(function () use ($room, $actor, $data) {
             $room = Room::query()->whereKey($room->id)->lockForUpdate()->firstOrFail();
+
+            $hotel = $room->hotel;
+            app(WelcomeTemplateCatalog::class)->syncHotel($hotel);
+            $hotel->refresh();
+            $key = $data['template_key'] ?? $hotel->default_welcome_template_key;
+            $this->assertTemplateEnabled($hotel, $key);
 
             if ($room->current_welcome_id) {
                 $this->closeCurrentStay($room, $actor);
@@ -36,6 +43,7 @@ class StayService
                 'locale' => $data['locale'] ?? $room->hotel->default_locale,
                 'source' => $data['source'] ?? 'manual',
                 'external_ref' => $data['external_ref'] ?? null,
+                'template_key' => $key,
                 'is_current' => true,
                 'checked_in_at' => now(),
                 'created_by' => $actor->id,
@@ -71,7 +79,7 @@ class StayService
     }
 
     /**
-     * @param  array{guest_display_name?: string, message?: ?string, locale?: ?string}  $data
+     * @param  array{guest_display_name?: string, message?: ?string, locale?: ?string, template_key?: string}  $data
      */
     public function updateCurrent(Room $room, User $actor, array $data): WelcomeContent
     {
@@ -81,6 +89,16 @@ class StayService
             throw ValidationException::withMessages([
                 'room' => 'Room has no current stay.',
             ]);
+        }
+
+        app(WelcomeTemplateCatalog::class)->syncHotel($room->hotel);
+        $room->hotel->refresh();
+
+        if (array_key_exists('template_key', $data) && $data['template_key'] !== null) {
+            $next = $data['template_key'];
+            if ($next !== $stay->template_key) {
+                $this->assertTemplateEnabled($room->hotel, $next);
+            }
         }
 
         $stay->fill($data);
@@ -109,6 +127,15 @@ class StayService
         if (! $room->is_active) {
             throw ValidationException::withMessages([
                 'room' => 'Room is inactive.',
+            ]);
+        }
+    }
+
+    private function assertTemplateEnabled(Hotel $hotel, string $key): void
+    {
+        if (! app(WelcomeTemplateCatalog::class)->isEnabled($hotel, $key)) {
+            throw ValidationException::withMessages([
+                'template_key' => 'Mẫu này không khả dụng.',
             ]);
         }
     }

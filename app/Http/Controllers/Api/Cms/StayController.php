@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api\Cms;
 
 use App\Domains\Content\StayService;
+use App\Domains\Content\WelcomeTemplateKey;
 use App\Http\Controllers\Controller;
 use App\Models\Hotel;
 use App\Models\Room;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class StayController extends Controller
 {
@@ -25,6 +27,7 @@ class StayController extends Controller
             'locale' => ['nullable', 'string', 'max:8'],
             'source' => ['nullable', 'in:manual,pms'],
             'external_ref' => ['nullable', 'string', 'max:255'],
+            'template_key' => ['nullable', 'string', Rule::in(WelcomeTemplateKey::values())],
         ]);
 
         /** @var User $user */
@@ -55,6 +58,7 @@ class StayController extends Controller
             'guest_display_name' => ['sometimes', 'required', 'string', 'max:255'],
             'message' => ['nullable', 'string'],
             'locale' => ['nullable', 'string', 'max:8'],
+            'template_key' => ['sometimes', 'required', 'string', Rule::in(WelcomeTemplateKey::values())],
         ]);
 
         /** @var User $user */
