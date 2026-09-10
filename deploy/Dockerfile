@@ -28,14 +28,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         bcmath \
         gd \
         intl \
-        mbstring \
         opcache \
         pcntl \
         pdo_mysql \
         sockets \
         zip \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
     && apt-get purge -y --auto-remove $PHPIZE_DEPS \
     && rm -rf /var/lib/apt/lists/*
 
