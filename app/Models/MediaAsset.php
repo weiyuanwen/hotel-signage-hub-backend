@@ -26,6 +26,10 @@ class MediaAsset extends Model
             return null;
         }
 
+        if ($this->disk === 'external') {
+            return $this->path;
+        }
+
         return Storage::disk($this->disk)->url($this->path);
     }
 }

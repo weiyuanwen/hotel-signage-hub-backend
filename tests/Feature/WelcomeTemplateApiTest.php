@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Hotel;
 use App\Models\HotelWelcomeTemplate;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\CreatesStaff;
 use Tests\TestCase;
@@ -137,5 +139,97 @@ class WelcomeTemplateApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.templates.1.display_name', null)
             ->assertJsonPath('data.templates.1.label', 'Sáng nhẹ');
+    }
+
+    public function test_manager_saves_layout_and_list_returns_normalized_look(): void
+    {
+        $hotel = Hotel::factory()->create();
+        Sanctum::actingAs($this->staff('hotel-manager', $hotel));
+
+        $this->getJson("/api/cms/hotels/{$hotel->id}/welcome-templates")
+            ->assertOk()
+            ->assertJsonPath('data.templates.1.layout.background.source', 'gallery')
+            ->assertJsonPath('data.templates.1.layout.font', 'be-vietnam');
+
+        $this->patchJson("/api/cms/hotels/{$hotel->id}/welcome-templates/linen", [
+            'layout' => [
+                'background' => ['source' => 'gallery', 'gallery_id' => 'sunlit'],
+                'tone' => 'warm',
+                'font' => 'outfit',
+                'slogan' => 'Kỳ nghỉ bắt đầu từ đây',
+                'colors' => [
+                    'name' => '#fff6ea',
+                    'slogan' => '#f3e6d4',
+                    'muted' => '#d9cbb8',
+                ],
+                'sizes' => [
+                    'name' => 6.2,
+                    'slogan' => 2.8,
+                    'message' => 2.1,
+                    'room' => 1.8,
+                ],
+                'slots' => [
+                    'logo' => ['x' => 10, 'y' => 20, 'visible' => true],
+                    'name' => ['x' => 12, 'y' => 44],
+                    'slogan' => ['x' => 12, 'y' => 58, 'visible' => true],
+                    'message' => ['x' => 12, 'y' => 68, 'visible' => true],
+                    'room' => ['x' => 86, 'y' => 88],
+                ],
+            ],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.templates.1.layout.tone', 'warm')
+            ->assertJsonPath('data.templates.1.layout.font', 'outfit')
+            ->assertJsonPath('data.templates.1.layout.slogan', 'Kỳ nghỉ bắt đầu từ đây')
+            ->assertJsonPath('data.templates.1.layout.background.gallery_id', 'sunlit')
+            ->assertJsonPath('data.templates.1.layout.colors.name', '#fff6ea')
+            ->assertJsonPath('data.templates.1.layout.colors.slogan', '#f3e6d4')
+            ->assertJsonPath('data.templates.1.layout.colors.muted', '#d9cbb8')
+            ->assertJsonPath('data.templates.1.layout.sizes.name', 6.2)
+            ->assertJsonPath('data.templates.1.layout.sizes.slogan', 2.8)
+            ->assertJsonPath('data.templates.1.layout.sizes.message', 2.1)
+            ->assertJsonPath('data.templates.1.layout.sizes.room', 1.8)
+            ->assertJsonPath('data.templates.1.layout.slots.name.x', 12);
+
+        $this->patchJson("/api/cms/hotels/{$hotel->id}/welcome-templates/linen", [
+            'layout' => [
+                'tone' => 'neon',
+                'font' => 'comic',
+                'background' => ['source' => 'gallery', 'gallery_id' => 'not-a-photo'],
+            ],
+        ])->assertStatus(422);
+    }
+
+    public function test_manager_uploads_and_clears_template_background(): void
+    {
+        Storage::fake('public');
+        $hotel = Hotel::factory()->create();
+        Sanctum::actingAs($this->staff('hotel-manager', $hotel));
+
+        $this->post("/api/cms/hotels/{$hotel->id}/welcome-templates/linen/media", [
+            'file' => UploadedFile::fake()->image('pool.jpg', 800, 450),
+        ], ['Accept' => 'application/json'])
+            ->assertCreated()
+            ->assertJsonPath('data.templates.1.layout.background.source', 'upload');
+
+        $url = $this->getJson("/api/cms/hotels/{$hotel->id}/welcome-templates")
+            ->assertOk()
+            ->json('data.templates.1.background_url');
+        $this->assertIsString($url);
+        $this->assertStringContainsString('/storage/hotels/', $url);
+
+        $this->deleteJson("/api/cms/hotels/{$hotel->id}/welcome-templates/linen/media")
+            ->assertOk()
+            ->assertJsonPath('data.templates.1.layout.background.source', 'gallery');
+    }
+
+    public function test_receptionist_cannot_upload_template_background(): void
+    {
+        $hotel = Hotel::factory()->create();
+        Sanctum::actingAs($this->staff('receptionist', $hotel));
+
+        $this->post("/api/cms/hotels/{$hotel->id}/welcome-templates/linen/media", [
+            'file' => UploadedFile::fake()->image('pool.jpg', 800, 450),
+        ], ['Accept' => 'application/json'])->assertForbidden();
     }
 }

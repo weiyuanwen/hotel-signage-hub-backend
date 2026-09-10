@@ -33,4 +33,9 @@ class PairingController extends Controller
 
         return response()->json($result, $status);
     }
+
+    public function consumeLink(string $token): JsonResponse
+    {
+        return response()->json($this->pairing->consumeLink($token));
+    }
 }

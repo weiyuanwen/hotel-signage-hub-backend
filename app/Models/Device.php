@@ -41,6 +41,11 @@ class Device extends Authenticatable
         return $this->hasMany(DevicePairingCode::class);
     }
 
+    public function pairingLinks(): HasMany
+    {
+        return $this->hasMany(DevicePairingLink::class);
+    }
+
     public function isPaired(): bool
     {
         return $this->status === 'paired';

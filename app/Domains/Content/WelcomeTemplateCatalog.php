@@ -61,9 +61,10 @@ class WelcomeTemplateCatalog
             $query->where('is_enabled', true);
         }
 
-        $templates = $query->get()
+        $templates = $query->with('backgroundMedia')->get()
             ->map(function (HotelWelcomeTemplate $template): array {
                 $key = WelcomeTemplateKey::from($template->template_key);
+                $layout = TemplateLayout::normalize($template->layout, $template->template_key);
 
                 return [
                     'key' => $template->template_key,
@@ -72,6 +73,11 @@ class WelcomeTemplateCatalog
                     'label' => $template->label(),
                     'is_enabled' => $template->is_enabled,
                     'sort_order' => $template->sort_order,
+                    'layout' => $layout,
+                    'background_url' => TemplateLayout::resolveBackgroundUrl(
+                        $layout,
+                        $template->backgroundMedia?->url(),
+                    ),
                 ];
             })
             ->values()

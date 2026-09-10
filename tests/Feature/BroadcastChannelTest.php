@@ -42,6 +42,7 @@ class BroadcastChannelTest extends TestCase
         $user = $this->staff('receptionist', $hotelA);
 
         $this->assertFalse(app(ChannelAuthorizer::class)->canJoinRoom($user, $hotelB->id, $roomB->id));
-        $this->assertTrue(app(ChannelAuthorizer::class)->canJoinRoom($user, $hotelA->id, 1));
+        $roomA = Room::factory()->create(['hotel_id' => $hotelA->id]);
+        $this->assertTrue(app(ChannelAuthorizer::class)->canJoinRoom($user, $hotelA->id, $roomA->id));
     }
 }

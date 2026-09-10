@@ -23,7 +23,7 @@ class StayController extends Controller
 
         $data = $request->validate([
             'guest_display_name' => ['required', 'string', 'max:255'],
-            'message' => ['nullable', 'string'],
+            'message' => ['nullable', 'string', 'max:2000'],
             'locale' => ['nullable', 'string', 'max:8'],
             'source' => ['nullable', 'in:manual,pms'],
             'external_ref' => ['nullable', 'string', 'max:255'],
@@ -56,7 +56,7 @@ class StayController extends Controller
 
         $data = $request->validate([
             'guest_display_name' => ['sometimes', 'required', 'string', 'max:255'],
-            'message' => ['nullable', 'string'],
+            'message' => ['nullable', 'string', 'max:2000'],
             'locale' => ['nullable', 'string', 'max:8'],
             'template_key' => ['sometimes', 'required', 'string', Rule::in(WelcomeTemplateKey::values())],
         ]);

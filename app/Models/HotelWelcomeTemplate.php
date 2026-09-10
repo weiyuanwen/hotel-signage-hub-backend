@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domains\Content\WelcomeTemplateKey;
 use Database\Factories\HotelWelcomeTemplateFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,6 +19,8 @@ class HotelWelcomeTemplate extends Model
         'is_enabled',
         'display_name',
         'sort_order',
+        'layout',
+        'background_media_id',
     ];
 
     protected function casts(): array
@@ -25,6 +28,7 @@ class HotelWelcomeTemplate extends Model
         return [
             'is_enabled' => 'boolean',
             'sort_order' => 'integer',
+            'layout' => 'array',
         ];
     }
 
@@ -33,13 +37,18 @@ class HotelWelcomeTemplate extends Model
         return $this->belongsTo(Hotel::class);
     }
 
+    public function backgroundMedia(): BelongsTo
+    {
+        return $this->belongsTo(MediaAsset::class, 'background_media_id');
+    }
+
     public function label(): string
     {
         if (is_string($this->display_name) && $this->display_name !== '') {
             return $this->display_name;
         }
 
-        $key = \App\Domains\Content\WelcomeTemplateKey::tryFrom($this->template_key);
+        $key = WelcomeTemplateKey::tryFrom($this->template_key);
 
         return $key?->builtInLabel() ?? $this->template_key;
     }

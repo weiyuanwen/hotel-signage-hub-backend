@@ -35,6 +35,10 @@ class RoomContentUpdated implements ShouldBroadcastNow
      */
     public function broadcastWith(): array
     {
-        return $this->payload;
+        return [
+            'hotel_id' => (int) $this->room->hotel_id,
+            'room_id' => (int) $this->room->id,
+            'content_revision' => (int) $this->room->content_revision,
+        ];
     }
 }

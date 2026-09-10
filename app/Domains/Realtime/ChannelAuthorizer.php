@@ -3,6 +3,7 @@
 namespace App\Domains\Realtime;
 
 use App\Models\Device;
+use App\Models\Room;
 use App\Models\User;
 
 class ChannelAuthorizer
@@ -16,7 +17,8 @@ class ChannelAuthorizer
         }
 
         if ($actor instanceof User) {
-            return $actor->canAccessHotel($hotelId);
+            return $actor->canAccessHotel($hotelId)
+                && Room::query()->whereKey($roomId)->where('hotel_id', $hotelId)->exists();
         }
 
         return false;

@@ -47,7 +47,7 @@ class AuthController extends Controller
      */
     private function profile(User $user): array
     {
-        $user->load('hotels:id,name,slug', 'roles:name');
+        $user->load('hotels:id,name,slug,plan,device_limit', 'roles:name');
 
         return [
             'id' => $user->id,
@@ -60,6 +60,7 @@ class AuthController extends Controller
                     'id' => $hotel->id,
                     'name' => $hotel->name,
                     'slug' => $hotel->slug,
+                    ...$hotel->toPlanPayload(),
                 ])->values(),
         ];
     }

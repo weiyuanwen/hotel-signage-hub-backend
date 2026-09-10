@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Domains\Realtime\Events\RoomContentUpdated;
+use App\Models\Device;
 use App\Models\Hotel;
 use App\Models\HotelWelcomeTemplate;
 use App\Models\MediaAsset;
@@ -104,7 +105,7 @@ class StayAndScreenDataTest extends TestCase
         $hotel->update(['logo_media_id' => $logo->id, 'default_media_id' => $bg->id]);
 
         $room = Room::factory()->create(['hotel_id' => $hotel->id]);
-        $device = \App\Models\Device::factory()->paired($hotel, $room)->create();
+        $device = Device::factory()->paired($hotel, $room)->create();
         $user = $this->staff('receptionist', $hotel);
 
         Sanctum::actingAs($user);
@@ -123,6 +124,7 @@ class StayAndScreenDataTest extends TestCase
             ->assertJsonPath('guest', null)
             ->assertJsonPath('template', null)
             ->assertJsonPath('hotel.name', $hotel->name)
+            ->assertJsonPath('hotel.timezone', $hotel->timezone)
             ->assertJsonPath('room.kind', 'guest')
             ->assertHeader('ETag');
     }
@@ -131,7 +133,7 @@ class StayAndScreenDataTest extends TestCase
     {
         $hotel = Hotel::factory()->create();
         $room = Room::factory()->create(['hotel_id' => $hotel->id, 'content_revision' => 4]);
-        $device = \App\Models\Device::factory()->paired($hotel, $room)->create();
+        $device = Device::factory()->paired($hotel, $room)->create();
 
         Sanctum::actingAs($device);
 
@@ -159,7 +161,7 @@ class StayAndScreenDataTest extends TestCase
 
         $hotel = Hotel::factory()->create();
         $room = Room::factory()->create(['hotel_id' => $hotel->id]);
-        $device = \App\Models\Device::factory()->paired($hotel, $room)->create();
+        $device = Device::factory()->paired($hotel, $room)->create();
         Sanctum::actingAs($this->staff('receptionist', $hotel));
 
         $this->postJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/check-in", [
@@ -250,7 +252,7 @@ class StayAndScreenDataTest extends TestCase
     {
         $hotel = Hotel::factory()->create();
         $room = Room::factory()->create(['hotel_id' => $hotel->id]);
-        $device = \App\Models\Device::factory()->paired($hotel, $room)->create();
+        $device = Device::factory()->paired($hotel, $room)->create();
         Sanctum::actingAs($this->staff('receptionist', $hotel));
 
         $this->postJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/check-in", [
@@ -277,5 +279,131 @@ class StayAndScreenDataTest extends TestCase
             'guest_display_name' => 'Mai',
             'template_key' => 'neon',
         ])->assertStatus(422);
+    }
+
+    public function test_occupied_screen_uses_template_gallery_not_hotel_background(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $bg = MediaAsset::factory()->create([
+            'hotel_id' => $hotel->id,
+            'type' => 'image',
+            'disk' => 'external',
+            'path' => 'https://example.test/hotel-brand.jpg',
+        ]);
+        $hotel->update(['default_media_id' => $bg->id]);
+        $room = Room::factory()->create(['hotel_id' => $hotel->id]);
+        $device = Device::factory()->paired($hotel, $room)->create();
+
+        Sanctum::actingAs($this->staff('hotel-manager', $hotel));
+        $this->patchJson("/api/cms/hotels/{$hotel->id}/welcome-templates/linen", [
+            'layout' => [
+                'background' => ['source' => 'gallery', 'gallery_id' => 'sunlit'],
+                'tone' => 'warm',
+                'slogan' => 'Chào ngày mới',
+            ],
+        ])->assertOk();
+
+        Sanctum::actingAs($this->staff('receptionist', $hotel));
+        $this->postJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/check-in", [
+            'guest_display_name' => 'Lan',
+            'template_key' => 'linen',
+        ])->assertCreated();
+
+        Sanctum::actingAs($device);
+        $screen = $this->getJson('/api/device/screen')
+            ->assertOk()
+            ->assertJsonPath('template.key', 'linen')
+            ->assertJsonPath('template.mode', 'look')
+            ->assertJsonPath('template.layout.tone', 'warm')
+            ->assertJsonPath('template.layout.slogan', 'Chào ngày mới')
+            ->assertJsonPath('guest.display_name', 'Lan')
+            ->json();
+
+        $this->assertStringContainsString('images.unsplash.com', $screen['media']['background_url']);
+        $this->assertStringNotContainsString('hotel-brand.jpg', $screen['media']['background_url']);
+
+        Sanctum::actingAs($this->staff('receptionist', $hotel));
+        $this->postJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/checkout")->assertOk();
+
+        Sanctum::actingAs($device);
+        $this->getJson('/api/device/screen')
+            ->assertOk()
+            ->assertJsonPath('guest', null)
+            ->assertJsonPath('template', null)
+            ->assertJsonPath('media.background_url', 'https://example.test/hotel-brand.jpg');
+    }
+
+    public function test_occupied_video_background_keeps_hospitality_not_template_gallery(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $bg = MediaAsset::factory()->create([
+            'hotel_id' => $hotel->id,
+            'type' => 'video',
+            'disk' => 'external',
+            'path' => 'https://youtu.be/jfKfPfyJRdk',
+        ]);
+        $hotel->update(['default_media_id' => $bg->id]);
+        $room = Room::factory()->create(['hotel_id' => $hotel->id]);
+        $device = Device::factory()->paired($hotel, $room)->create();
+
+        Sanctum::actingAs($this->staff('hotel-manager', $hotel));
+        $this->patchJson("/api/cms/hotels/{$hotel->id}/welcome-templates/linen", [
+            'layout' => [
+                'background' => ['source' => 'gallery', 'gallery_id' => 'sunlit'],
+                'font' => 'cormorant',
+                'slogan' => 'Không hiện khi có video',
+            ],
+        ])->assertOk();
+
+        Sanctum::actingAs($this->staff('receptionist', $hotel));
+        $this->postJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/check-in", [
+            'guest_display_name' => 'Lan',
+            'template_key' => 'linen',
+        ])->assertCreated();
+
+        Sanctum::actingAs($device);
+        $this->getJson('/api/device/screen')
+            ->assertOk()
+            ->assertJsonPath('guest.display_name', 'Lan')
+            ->assertJsonPath('template.key', 'linen')
+            ->assertJsonPath('template.mode', 'video')
+            ->assertJsonPath('template.layout', null)
+            ->assertJsonPath('media.kind', 'video')
+            ->assertJsonPath('media.background_url', 'https://youtu.be/jfKfPfyJRdk');
+    }
+
+    public function test_occupied_room_video_overrides_hotel_still_and_skips_look(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $hotelBg = MediaAsset::factory()->create([
+            'hotel_id' => $hotel->id,
+            'type' => 'image',
+            'disk' => 'external',
+            'path' => 'https://example.test/hotel-brand.jpg',
+        ]);
+        $hotel->update(['default_media_id' => $hotelBg->id]);
+        $room = Room::factory()->create(['hotel_id' => $hotel->id]);
+        $roomBg = MediaAsset::factory()->create([
+            'hotel_id' => $hotel->id,
+            'type' => 'video',
+            'disk' => 'external',
+            'path' => 'https://youtu.be/room-loop',
+        ]);
+        $room->update(['default_media_id' => $roomBg->id]);
+        $device = Device::factory()->paired($hotel, $room)->create();
+
+        Sanctum::actingAs($this->staff('receptionist', $hotel));
+        $this->postJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/check-in", [
+            'guest_display_name' => 'Lan',
+            'template_key' => 'linen',
+        ])->assertCreated();
+
+        Sanctum::actingAs($device);
+        $this->getJson('/api/device/screen')
+            ->assertOk()
+            ->assertJsonPath('template.mode', 'video')
+            ->assertJsonPath('template.layout', null)
+            ->assertJsonPath('media.kind', 'video')
+            ->assertJsonPath('media.background_url', 'https://youtu.be/room-loop');
     }
 }
