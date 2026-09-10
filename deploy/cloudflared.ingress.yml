@@ -1,0 +1,17 @@
+# Thêm 2 block này vào /etc/cloudflared/config.yml
+# NGAY TRƯỚC dòng "service: http_status:404".
+# Giữ nguyên hostname Asiagiving. Không đụng cổng 80/3000/8000/8080.
+#
+#   sudo nano /etc/cloudflared/config.yml
+#   sudo systemctl restart cloudflared
+#   sudo cloudflared tunnel ingress validate
+
+  - hostname: api.onthilaixe.online
+    service: http://127.0.0.1:9080
+
+  - hostname: ws.onthilaixe.online
+    service: http://127.0.0.1:9081
+    originRequest:
+      connectTimeout: 30s
+      keepAliveTimeout: 90s
+      disableChunkedEncoding: true

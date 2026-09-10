@@ -1,0 +1,116 @@
+name: hotel-hub
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      RUN_MIGRATIONS: "1"
+    ports:
+      - "127.0.0.1:9080:80"
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - laravel-storage:/var/www/html/storage
+      - laravel-cache:/var/www/html/bootstrap/cache
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  reverb:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      RUN_MIGRATIONS: "0"
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    ports:
+      - "127.0.0.1:9081:8080"
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - laravel-storage:/var/www/html/storage
+      - laravel-cache:/var/www/html/bootstrap/cache
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  queue:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      RUN_MIGRATIONS: "0"
+    command: ["php", "artisan", "queue:work", "redis", "--sleep=1", "--tries=3", "--max-time=3600"]
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - laravel-storage:/var/www/html/storage
+      - laravel-cache:/var/www/html/bootstrap/cache
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  scheduler:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      RUN_MIGRATIONS: "0"
+    command: ["php", "artisan", "schedule:work"]
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - laravel-storage:/var/www/html/storage
+      - laravel-cache:/var/www/html/bootstrap/cache
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-hotel_hub}
+      MYSQL_USER: ${DB_USERNAME:-hotel}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-hotel}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-hotelroot}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1"]
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  redis-data:
+  laravel-storage:
+  laravel-cache:
