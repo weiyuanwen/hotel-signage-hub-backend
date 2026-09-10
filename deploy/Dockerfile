@@ -10,7 +10,7 @@ RUN composer install --no-dev --no-scripts --optimize-autoloader --prefer-dist \
     && rm -rf /root/.composer/cache
 
 
-FROM php:8.3-fpm-bookworm
+FROM php:8.4-fpm-bookworm
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
