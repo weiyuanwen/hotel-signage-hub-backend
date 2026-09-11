@@ -60,5 +60,12 @@ class DemoSeeder extends Seeder
         );
         $manager->syncRoles(['hotel-manager']);
         $manager->hotels()->syncWithoutDetaching([$hotel->id => ['is_primary' => true]]);
+
+        $tester = User::query()->updateOrCreate(
+            ['email' => 'test@saigon-pearl.test'],
+            ['name' => 'Tester Pearl', 'password' => Hash::make('password'), 'is_active' => true],
+        );
+        $tester->syncRoles(['receptionist']);
+        $tester->hotels()->syncWithoutDetaching([$hotel->id => ['is_primary' => true]]);
     }
 }

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Cms\AuthController;
 use App\Http\Controllers\Api\Cms\DeviceAdminController;
+use App\Http\Controllers\Api\Cms\DeviceMediaController;
 use App\Http\Controllers\Api\Cms\HotelController;
 use App\Http\Controllers\Api\Cms\HotelMediaController;
 use App\Http\Controllers\Api\Cms\PairingClaimController;
@@ -50,6 +51,8 @@ Route::prefix('cms')->group(function () {
             Route::get('devices', [DeviceAdminController::class, 'index']);
             Route::patch('devices/{device}', [DeviceAdminController::class, 'update']);
             Route::post('devices/{device}/unpair', [DeviceAdminController::class, 'unpair']);
+            Route::post('devices/{device}/media', [DeviceMediaController::class, 'store']);
+            Route::delete('devices/{device}/media', [DeviceMediaController::class, 'destroy']);
             Route::get('staff', [StaffController::class, 'index']);
             Route::post('staff', [StaffController::class, 'store']);
             Route::patch('staff/{user}', [StaffController::class, 'update']);

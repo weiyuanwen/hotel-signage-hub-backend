@@ -17,7 +17,7 @@ class ScreenDataBuilder
      */
     public function forDevice(Device $device): array
     {
-        $device = $device->fresh(['hotel', 'room']) ?? $device;
+        $device = $device->fresh(['hotel', 'room', 'defaultMedia']) ?? $device;
         $hotel = $device->hotel;
         $room = $device->room;
 
@@ -25,7 +25,7 @@ class ScreenDataBuilder
             abort(409, 'Device is not paired to a room.');
         }
 
-        return $this->forRoom($hotel, $room);
+        return $this->build($hotel, $room, $device->defaultMedia);
     }
 
     /**
@@ -33,11 +33,19 @@ class ScreenDataBuilder
      */
     public function forRoom(Hotel $hotel, Room $room): array
     {
+        return $this->build($hotel, $room, null);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function build(Hotel $hotel, Room $room, ?MediaAsset $deviceMedia): array
+    {
         $hotel = $hotel->fresh(['logo', 'defaultMedia']) ?? $hotel;
         $room = $room->fresh(['currentWelcome', 'defaultMedia']) ?? $room;
 
         $stay = $room->currentWelcome;
-        $baseMedia = $room->defaultMedia ?? $hotel->defaultMedia;
+        $baseMedia = $deviceMedia ?? $room->defaultMedia ?? $hotel->defaultMedia;
         $useVideo = $stay && $this->isVideo($baseMedia);
 
         $templateRow = null;
@@ -50,13 +58,13 @@ class ScreenDataBuilder
                 ->first();
             $layout = TemplateLayout::normalize($templateRow?->layout, $stay->template_key);
             $templateUrl = TemplateLayout::resolveBackgroundUrl($layout, $templateRow?->backgroundMedia?->url());
-            $media = $templateUrl
+            $media = $deviceMedia ?: ($templateUrl
                 ? new MediaAsset([
                     'type' => 'image',
                     'disk' => 'external',
                     'path' => $templateUrl,
                 ])
-                : $baseMedia;
+                : $baseMedia);
         } else {
             $media = $baseMedia;
         }

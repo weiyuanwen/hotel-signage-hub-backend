@@ -3,7 +3,9 @@
 namespace App\Domains\Content;
 
 use App\Domains\Device\ScreenDataBuilder;
+use App\Domains\Realtime\Events\DeviceCommandIssued;
 use App\Domains\Realtime\Events\RoomContentUpdated;
+use App\Models\Device;
 use App\Models\Hotel;
 use App\Models\HotelWelcomeTemplate;
 use App\Models\MediaAsset;
@@ -56,6 +58,43 @@ class HotelBrandingService
         $this->touchRoom($room);
     }
 
+    public function assignDeviceBackground(Device $device, MediaAsset $asset): void
+    {
+        $device->load('defaultMedia');
+        $previous = $device->defaultMedia;
+        $device->forceFill(['default_media_id' => $asset->id])->save();
+
+        if ($previous && $previous->id !== $asset->id) {
+            $this->deleteIfOrphaned($previous);
+        }
+
+        $this->touchDevice($device);
+    }
+
+    public function clearDeviceBackground(Device $device): void
+    {
+        $device->load('defaultMedia');
+        $previous = $device->defaultMedia;
+
+        if (! $previous) {
+            return;
+        }
+
+        $device->forceFill(['default_media_id' => null])->save();
+        $this->deleteIfOrphaned($previous);
+        $this->touchDevice($device);
+    }
+
+    public function touchDevice(Device $device): void
+    {
+        $fresh = $device->fresh(['hotel', 'room', 'defaultMedia']);
+        if (! $fresh) {
+            return;
+        }
+
+        event(new DeviceCommandIssued($fresh, 'reload'));
+    }
+
     public function touchRoom(Room $room): void
     {
         $room->bumpRevision();
@@ -76,6 +115,7 @@ class HotelBrandingService
             })
             ->exists()
             || Room::query()->where('default_media_id', $id)->exists()
+            || Device::query()->where('default_media_id', $id)->exists()
             || HotelWelcomeTemplate::query()->where('background_media_id', $id)->exists();
 
         if ($stillUsed) {

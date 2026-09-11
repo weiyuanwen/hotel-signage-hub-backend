@@ -41,6 +41,11 @@ class HotelPlan
         return self::pairingMode($plan) === 'link';
     }
 
+    public static function allowsDeviceBackgrounds(string $plan): bool
+    {
+        return in_array($plan, [self::STANDARD, self::PREMIUM], true);
+    }
+
     public static function label(string $plan): string
     {
         return match ($plan) {

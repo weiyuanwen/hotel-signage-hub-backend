@@ -45,6 +45,11 @@ class Hotel extends Model
         return HotelPlan::allowsPairingLinks($this->plan ?? HotelPlan::PREMIUM);
     }
 
+    public function allowsDeviceBackgrounds(): bool
+    {
+        return HotelPlan::allowsDeviceBackgrounds($this->plan ?? HotelPlan::PREMIUM);
+    }
+
     public function pairedDeviceCount(): int
     {
         if (array_key_exists('paired_device_count', $this->attributes)) {
@@ -74,6 +79,7 @@ class Hotel extends Model
             'device_limit' => $this->device_limit,
             'pairing_mode' => $this->pairingMode(),
             'paired_device_count' => $this->pairedDeviceCount(),
+            'allows_device_backgrounds' => $this->allowsDeviceBackgrounds(),
         ];
     }
 

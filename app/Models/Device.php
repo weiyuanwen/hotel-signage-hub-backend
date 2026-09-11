@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['hotel_id', 'room_id', 'name', 'status', 'paired_at', 'last_seen_at'])]
+#[Fillable(['hotel_id', 'room_id', 'name', 'status', 'paired_at', 'last_seen_at', 'default_media_id'])]
 #[Hidden(['remember_token'])]
 class Device extends Authenticatable
 {
@@ -34,6 +34,11 @@ class Device extends Authenticatable
     public function room(): BelongsTo
     {
         return $this->belongsTo(Room::class);
+    }
+
+    public function defaultMedia(): BelongsTo
+    {
+        return $this->belongsTo(MediaAsset::class, 'default_media_id');
     }
 
     public function pairingCodes(): HasMany

@@ -27,7 +27,7 @@ class DeviceAdminController extends Controller
     {
         $devices = Device::query()
             ->where('hotel_id', $hotel->id)
-            ->with(['hotel.logo', 'hotel.defaultMedia', 'room.currentWelcome', 'room.defaultMedia'])
+            ->with(['hotel.logo', 'hotel.defaultMedia', 'room.currentWelcome', 'room.defaultMedia', 'defaultMedia'])
             ->orderBy('id')
             ->get()
             ->map(fn (Device $device) => $this->payload($device));
@@ -66,7 +66,7 @@ class DeviceAdminController extends Controller
         $roomChanged = array_key_exists('room_id', $data) && (int) $data['room_id'] !== (int) $device->room_id;
 
         $device->forceFill($data)->save();
-        $device->refresh()->load(['hotel.logo', 'hotel.defaultMedia', 'room.currentWelcome', 'room.defaultMedia']);
+        $device->refresh()->load(['hotel.logo', 'hotel.defaultMedia', 'room.currentWelcome', 'room.defaultMedia', 'defaultMedia']);
 
         if ($roomChanged) {
             event(new DeviceCommandIssued($device, 'reload'));
@@ -91,11 +91,12 @@ class DeviceAdminController extends Controller
     private function payload(Device $device): array
     {
         $row = $device->toArray();
-        unset($row['room'], $row['hotel']);
+        unset($row['room'], $row['hotel'], $row['default_media']);
 
         $screen = $device->isPaired() && $device->hotel && $device->room
-            ? $this->screens->forRoom($device->hotel, $device->room)
+            ? $this->screens->forDevice($device)
             : null;
+        $own = $device->defaultMedia;
 
         return [
             ...$row,
@@ -103,6 +104,8 @@ class DeviceAdminController extends Controller
             'room_name' => $device->room?->name,
             'room_kind' => $device->room?->kind,
             'room_guest' => $device->room?->currentWelcome?->guest_display_name,
+            'background_url' => $own?->url(),
+            'background_kind' => $own ? ($own->type === 'video' ? 'video' : 'image') : null,
             'online' => $this->heartbeat->isOnline($device->id),
             'screen' => $screen,
         ];
