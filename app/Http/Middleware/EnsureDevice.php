@@ -17,6 +17,14 @@ class EnsureDevice
             abort(403, 'Device token required.');
         }
 
+        $hotel = $user->hotel;
+        if ($hotel && ! $hotel->subscriptionActive()) {
+            abort(403, 'Subscription expired.');
+        }
+        if ($hotel && ! $hotel->deviceWithinQuota($user)) {
+            abort(403, 'Device limit reached.');
+        }
+
         return $next($request);
     }
 }

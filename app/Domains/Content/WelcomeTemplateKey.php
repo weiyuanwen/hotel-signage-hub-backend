@@ -9,6 +9,7 @@ enum WelcomeTemplateKey: string
     case Harbor = 'harbor';
     case Garden = 'garden';
     case Stone = 'stone';
+    case Vista = 'vista';
 
     public function builtInLabel(): string
     {
@@ -18,6 +19,7 @@ enum WelcomeTemplateKey: string
             self::Harbor => 'Cảng đêm',
             self::Garden => 'Vườn trà',
             self::Stone => 'Đá ấm',
+            self::Vista => 'Tầm nhìn',
         };
     }
 
@@ -29,6 +31,7 @@ enum WelcomeTemplateKey: string
             self::Harbor => 3,
             self::Garden => 4,
             self::Stone => 5,
+            self::Vista => 6,
         };
     }
 

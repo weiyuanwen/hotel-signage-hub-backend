@@ -47,7 +47,7 @@ class AuthController extends Controller
      */
     private function profile(User $user): array
     {
-        $user->load('hotels:id,name,slug,plan,device_limit', 'roles:name');
+        $user->load('hotels:id,name,slug,plan,device_limit,subscription_expires_at', 'roles:name');
 
         return [
             'id' => $user->id,

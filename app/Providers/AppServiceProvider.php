@@ -48,5 +48,15 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('waitlist', function (Request $request) {
             return Limit::perMinute(8)->by($request->ip());
         });
+
+        RateLimiter::for('billing-checkout', function (Request $request) {
+            $email = strtolower((string) $request->input('email', ''));
+
+            return Limit::perMinute(20)->by($email.'|'.$request->ip());
+        });
+
+        RateLimiter::for('billing-poll', function (Request $request) {
+            return Limit::perMinute(60)->by($request->ip());
+        });
     }
 }

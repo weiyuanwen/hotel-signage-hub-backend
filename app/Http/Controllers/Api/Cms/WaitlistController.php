@@ -19,21 +19,24 @@ class WaitlistController extends Controller
             'plan' => ['nullable', 'string', Rule::in(HotelPlan::keys())],
         ]);
 
+        $requested = $data['plan'] ?? HotelPlan::FREE;
         $result = $signup->register(
             $data['email'],
             $data['hotel_name'] ?? null,
-            $data['plan'] ?? HotelPlan::FREE,
+            HotelPlan::FREE,
         );
 
         if ($result['status'] === 'existing') {
             return response()->json([
                 'status' => 'existing',
+                'plan' => $requested,
                 'message' => 'Email này đã có quầy. Đăng nhập để tiếp tục.',
             ], 409);
         }
 
         return response()->json([
             'status' => 'created',
+            'plan' => $requested,
             'message' => 'Đã gửi tài khoản tới email của bạn.',
         ], 201);
     }

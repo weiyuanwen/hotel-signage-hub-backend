@@ -18,9 +18,11 @@ class HeartbeatController extends Controller
         $device = $request->user();
         $lastSeenBefore = $device->last_seen_at;
         $this->heartbeat->touch($device);
+        $device->loadMissing('room');
 
         return response()->json([
             'online' => true,
+            'content_revision' => $device->room?->content_revision,
             'last_seen_at_unchanged' => $device->fresh()->last_seen_at?->equalTo($lastSeenBefore) ?? $lastSeenBefore === null,
         ]);
     }

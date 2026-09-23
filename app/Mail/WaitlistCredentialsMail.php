@@ -23,7 +23,7 @@ class WaitlistCredentialsMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Quầy Signage Desk của bạn đã mở');
+        return new Envelope(subject: 'Quầy SignageHub của bạn đã mở');
     }
 
     public function content(): Content
@@ -37,9 +37,8 @@ class WaitlistCredentialsMail extends Mailable
                 'loginUrl' => rtrim((string) config('app.cms_url'), '/').'/login',
                 'planLabel' => HotelPlan::label($this->hotel->plan),
                 'deviceLabel' => $limit === null ? 'không giới hạn TV' : $limit.' TV',
-                'pairingLabel' => $this->hotel->allowsPairingLinks()
-                    ? 'Mở link ghép trên TV, không cần gõ mã PIN.'
-                    : 'TV hiện mã PIN. Nhập mã đó ở trang Phòng để ghép.',
+                'pairingLabel' => HotelPlan::pairingLabel($this->hotel->plan),
+                'featureLines' => HotelPlan::featureLines($this->hotel->plan),
             ],
         );
     }

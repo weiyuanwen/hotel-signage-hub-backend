@@ -1,4 +1,4 @@
-Signage Desk
+SignageHub
 
 Xin chào {{ $user->name }},
 
@@ -7,9 +7,9 @@ Quầy {{ $hotel->name }} đã mở.
 Email: {{ $user->email }}
 Mật khẩu tạm: {{ $plainPassword }}
 Gói: {{ $planLabel }} ({{ $deviceLabel }})
-Ghép TV: {{ $pairingLabel }}
-
-Nền phòng nhận ảnh, MP4, hoặc link YouTube/Vimeo.
+@foreach ($featureLines as $line)
+- {{ $line }}
+@endforeach
 
 Vào quầy: {{ $loginUrl }}
 

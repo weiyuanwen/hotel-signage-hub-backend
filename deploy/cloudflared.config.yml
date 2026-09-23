@@ -1,0 +1,53 @@
+tunnel: cfa2cf84-48fd-4eee-88b0-d62f468cd69f
+credentials-file: /home/edward/.cloudflared/cfa2cf84-48fd-4eee-88b0-d62f468cd69f.json
+protocol: http2
+
+ingress:
+  - hostname: asiagiving.org
+    service: http://localhost:80
+
+  - hostname: app.asiagiving.org
+    service: http://localhost:3000
+
+  - hostname: api.asiagiving.org
+    service: http://localhost:8000
+
+  - hostname: admin.asiagiving.org
+    service: http://localhost:8080
+
+  - hostname: api.onthilaixe.online
+    service: http://127.0.0.1:9080
+
+  - hostname: ws.onthilaixe.online
+    service: http://127.0.0.1:9081
+    originRequest:
+      connectTimeout: 30s
+      keepAliveTimeout: 90s
+      disableChunkedEncoding: true
+
+  - hostname: tiemnhaduy.com
+    service: http://127.0.0.1:9090
+
+  - hostname: www.tiemnhaduy.com
+    service: http://127.0.0.1:9090
+
+  - hostname: signagehub.online
+    service: http://127.0.0.1:9082
+
+  - hostname: www.signagehub.online
+    service: http://127.0.0.1:9082
+
+  - hostname: app.signagehub.online
+    service: http://127.0.0.1:9083
+
+  - hostname: api.signagehub.online
+    service: http://127.0.0.1:9080
+
+  - hostname: ws.signagehub.online
+    service: http://127.0.0.1:9081
+    originRequest:
+      connectTimeout: 30s
+      keepAliveTimeout: 90s
+      disableChunkedEncoding: true
+
+  - service: http_status:404

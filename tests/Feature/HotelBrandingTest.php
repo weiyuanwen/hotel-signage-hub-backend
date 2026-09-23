@@ -6,6 +6,8 @@ use App\Domains\Realtime\Events\RoomContentUpdated;
 use App\Models\Device;
 use App\Models\Hotel;
 use App\Models\Room;
+use Illuminate\Broadcasting\BroadcastException;
+use Illuminate\Contracts\Broadcasting\Factory as BroadcastFactory;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
@@ -53,6 +55,25 @@ class HotelBrandingTest extends TestCase
             ->assertOk()
             ->assertJsonPath('weather.key', 'da-nang')
             ->assertJsonPath('weather.latitude', 16.0544);
+    }
+
+    public function test_weather_region_saves_when_tv_broadcast_fails(): void
+    {
+        $this->mock(BroadcastFactory::class, function ($mock) {
+            $mock->shouldReceive('queue')->andThrow(new BroadcastException('Could not resolve host'));
+        });
+
+        $hotel = Hotel::factory()->create(['weather_region' => 'ho-chi-minh']);
+        Room::factory()->create(['hotel_id' => $hotel->id]);
+        Sanctum::actingAs($this->staff('hotel-manager', $hotel));
+
+        $this->patchJson("/api/cms/hotels/{$hotel->id}", [
+            'weather_region' => 'da-nang',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.weather_region', 'da-nang');
+
+        $this->assertSame('da-nang', $hotel->fresh()->weather_region);
     }
 
     public function test_receptionist_cannot_patch_branding_or_upload(): void

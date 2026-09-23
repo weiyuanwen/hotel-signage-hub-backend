@@ -5,6 +5,7 @@ namespace App\Domains\Content;
 use App\Domains\Device\ScreenDataBuilder;
 use App\Domains\Realtime\Events\DeviceCommandIssued;
 use App\Domains\Realtime\Events\RoomContentUpdated;
+use App\Domains\Realtime\SafeBroadcast;
 use App\Models\Device;
 use App\Models\Hotel;
 use App\Models\HotelWelcomeTemplate;
@@ -92,7 +93,7 @@ class HotelBrandingService
             return;
         }
 
-        event(new DeviceCommandIssued($fresh, 'reload'));
+        SafeBroadcast::send(new DeviceCommandIssued($fresh, 'reload'));
     }
 
     public function touchRoom(Room $room): void
@@ -103,7 +104,7 @@ class HotelBrandingService
             return;
         }
 
-        event(new RoomContentUpdated($fresh, $this->screens->forRoom($fresh->hotel, $fresh)));
+        SafeBroadcast::send(new RoomContentUpdated($fresh, $this->screens->forRoom($fresh->hotel, $fresh)));
     }
 
     public function deleteIfOrphaned(MediaAsset $asset): void
@@ -154,7 +155,7 @@ class HotelBrandingService
                 continue;
             }
 
-            event(new RoomContentUpdated($fresh, $this->screens->forRoom($fresh->hotel, $fresh)));
+            SafeBroadcast::send(new RoomContentUpdated($fresh, $this->screens->forRoom($fresh->hotel, $fresh)));
         }
     }
 }

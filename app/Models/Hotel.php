@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'slug', 'timezone', 'default_locale', 'weather_region', 'wifi_ssid', 'wifi_password', 'is_active', 'plan', 'device_limit', 'logo_media_id', 'default_media_id', 'default_welcome_template_key'])]
+#[Fillable(['name', 'slug', 'timezone', 'default_locale', 'weather_region', 'wifi_ssid', 'wifi_password', 'is_active', 'plan', 'device_limit', 'subscription_expires_at', 'logo_media_id', 'default_media_id', 'default_welcome_template_key'])]
 class Hotel extends Model
 {
     /** @use HasFactory<HotelFactory> */
@@ -22,6 +22,7 @@ class Hotel extends Model
         return [
             'is_active' => 'boolean',
             'device_limit' => 'integer',
+            'subscription_expires_at' => 'datetime',
         ];
     }
 
@@ -59,13 +60,43 @@ class Hotel extends Model
         return $this->devices()->where('status', 'paired')->count();
     }
 
+    public function subscriptionActive(): bool
+    {
+        if (in_array($this->plan ?? HotelPlan::PREMIUM, [HotelPlan::FREE, HotelPlan::TRIAL], true)) {
+            return true;
+        }
+        if ($this->subscription_expires_at === null) {
+            return true;
+        }
+
+        return $this->subscription_expires_at->isFuture();
+    }
+
     public function hasDeviceCapacity(): bool
     {
+        if (! $this->subscriptionActive()) {
+            return false;
+        }
         if ($this->device_limit === null) {
             return true;
         }
 
         return $this->pairedDeviceCount() < $this->device_limit;
+    }
+
+    public function deviceWithinQuota(Device $device): bool
+    {
+        if ($this->device_limit === null) {
+            return true;
+        }
+
+        $kept = $this->devices()
+            ->where('status', 'paired')
+            ->orderBy('id')
+            ->limit($this->device_limit)
+            ->pluck('id');
+
+        return $kept->contains($device->id);
     }
 
     /**
@@ -78,8 +109,11 @@ class Hotel extends Model
             'plan_label' => HotelPlan::label($this->plan ?? HotelPlan::PREMIUM),
             'device_limit' => $this->device_limit,
             'pairing_mode' => $this->pairingMode(),
+            'allows_pairing_links' => $this->allowsPairingLinks(),
             'paired_device_count' => $this->pairedDeviceCount(),
             'allows_device_backgrounds' => $this->allowsDeviceBackgrounds(),
+            'subscription_active' => $this->subscriptionActive(),
+            'subscription_expires_at' => $this->subscription_expires_at?->toIso8601String(),
         ];
     }
 

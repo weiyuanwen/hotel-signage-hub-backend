@@ -18,7 +18,7 @@ class WaitlistSignupService
     public function register(string $email, ?string $hotelName, string $plan = HotelPlan::FREE): array
     {
         $email = Str::lower(trim($email));
-        $plan = in_array($plan, HotelPlan::keys(), true) ? $plan : HotelPlan::FREE;
+        $plan = HotelPlan::FREE;
 
         $existing = User::query()->where('email', $email)->first();
 

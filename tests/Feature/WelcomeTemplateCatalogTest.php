@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 class WelcomeTemplateCatalogTest extends TestCase
 {
-    public function test_creating_a_hotel_syncs_five_enabled_templates_default_dusk(): void
+    public function test_creating_a_hotel_syncs_six_enabled_templates_default_dusk(): void
     {
         $hotel = Hotel::factory()->create();
 
@@ -19,9 +19,9 @@ class WelcomeTemplateCatalogTest extends TestCase
             ->orderBy('sort_order')
             ->get();
 
-        $this->assertCount(5, $rows);
+        $this->assertCount(6, $rows);
         $this->assertSame(
-            ['dusk', 'linen', 'harbor', 'garden', 'stone'],
+            ['dusk', 'linen', 'harbor', 'garden', 'stone', 'vista'],
             $rows->pluck('template_key')->all(),
         );
         $this->assertTrue($rows->every(fn (HotelWelcomeTemplate $row) => $row->is_enabled));
@@ -29,6 +29,7 @@ class WelcomeTemplateCatalogTest extends TestCase
         $this->assertSame('dusk', $hotel->fresh()->default_welcome_template_key);
         $this->assertSame(1, $rows[0]->sort_order);
         $this->assertSame(5, $rows[4]->sort_order);
+        $this->assertSame(6, $rows[5]->sort_order);
     }
 
     public function test_sync_hotel_is_idempotent_and_does_not_reenable(): void
@@ -42,7 +43,7 @@ class WelcomeTemplateCatalogTest extends TestCase
 
         app(WelcomeTemplateCatalog::class)->syncHotel($hotel);
 
-        $this->assertSame(5, HotelWelcomeTemplate::query()->where('hotel_id', $hotel->id)->count());
+        $this->assertSame(6, HotelWelcomeTemplate::query()->where('hotel_id', $hotel->id)->count());
         $garden = HotelWelcomeTemplate::query()
             ->where('hotel_id', $hotel->id)
             ->where('template_key', 'garden')

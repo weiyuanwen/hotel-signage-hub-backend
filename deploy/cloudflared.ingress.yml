@@ -1,15 +1,24 @@
-# Thêm 2 block này vào /etc/cloudflared/config.yml
+# Thêm các block này vào /etc/cloudflared/config.yml
 # NGAY TRƯỚC dòng "service: http_status:404".
-# Giữ nguyên hostname Asiagiving. Không đụng cổng 80/3000/8000/8080.
+# Giữ nguyên hostname Asiagiving / tiemnhaduy / onthilaixe.
 #
-#   sudo nano /etc/cloudflared/config.yml
-#   sudo systemctl restart cloudflared
+#   sudo cp deploy/cloudflared.config.yml /etc/cloudflared/config.yml
 #   sudo cloudflared tunnel ingress validate
+#   sudo systemctl restart cloudflared
 
-  - hostname: api.onthilaixe.online
+  - hostname: signagehub.online
+    service: http://127.0.0.1:9082
+
+  - hostname: www.signagehub.online
+    service: http://127.0.0.1:9082
+
+  - hostname: app.signagehub.online
+    service: http://127.0.0.1:9083
+
+  - hostname: api.signagehub.online
     service: http://127.0.0.1:9080
 
-  - hostname: ws.onthilaixe.online
+  - hostname: ws.signagehub.online
     service: http://127.0.0.1:9081
     originRequest:
       connectTimeout: 30s

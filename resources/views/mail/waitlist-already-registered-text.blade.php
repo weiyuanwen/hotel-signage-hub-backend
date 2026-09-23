@@ -1,8 +1,8 @@
-Signage Desk
+SignageHub
 
 Xin chào {{ $user->name }},
 
-{{ $user->email }} đã có quầy Signage Desk. Đăng nhập bằng mật khẩu hiện tại.
+{{ $user->email }} đã có quầy SignageHub. Đăng nhập bằng mật khẩu hiện tại.
 
 {{ $loginUrl }}
 

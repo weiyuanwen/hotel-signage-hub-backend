@@ -27,10 +27,10 @@ class WelcomeTemplateApiTest extends TestCase
         $keys = $this->getJson("/api/cms/hotels/{$hotel->id}/welcome-templates")
             ->assertOk()
             ->assertJsonPath('data.default_key', 'dusk')
-            ->assertJsonCount(4, 'data.templates')
+            ->assertJsonCount(5, 'data.templates')
             ->json('data.templates');
 
-        $this->assertSame(['dusk', 'linen', 'harbor', 'garden'], array_column($keys, 'key'));
+        $this->assertSame(['dusk', 'linen', 'harbor', 'garden', 'vista'], array_column($keys, 'key'));
     }
 
     public function test_manager_lists_disabled_templates_too(): void
@@ -45,11 +45,12 @@ class WelcomeTemplateApiTest extends TestCase
 
         $this->getJson("/api/cms/hotels/{$hotel->id}/welcome-templates")
             ->assertOk()
-            ->assertJsonCount(5, 'data.templates')
+            ->assertJsonCount(6, 'data.templates')
             ->assertJsonPath('data.templates.4.key', 'stone')
             ->assertJsonPath('data.templates.4.is_enabled', false)
             ->assertJsonPath('data.templates.4.label', 'Tối đá')
-            ->assertJsonPath('data.templates.4.built_in_name', 'Đá ấm');
+            ->assertJsonPath('data.templates.4.built_in_name', 'Đá ấm')
+            ->assertJsonPath('data.templates.5.key', 'vista');
     }
 
     public function test_receptionist_cannot_patch_templates(): void
@@ -89,7 +90,7 @@ class WelcomeTemplateApiTest extends TestCase
             'is_enabled' => false,
         ])->assertStatus(422);
 
-        foreach (['linen', 'harbor', 'garden', 'stone'] as $key) {
+        foreach (['linen', 'harbor', 'garden', 'stone', 'vista'] as $key) {
             $this->patchJson("/api/cms/hotels/{$hotel->id}/welcome-templates/{$key}", [
                 'is_enabled' => false,
             ])->assertOk();
@@ -157,6 +158,8 @@ class WelcomeTemplateApiTest extends TestCase
                 'tone' => 'warm',
                 'font' => 'outfit',
                 'slogan' => 'Kỳ nghỉ bắt đầu từ đây',
+                'lead' => 'Chào mừng đến nhà.',
+                'wish' => 'Chúc quý khách nghỉ ngơi thật thoải mái.',
                 'colors' => [
                     'name' => '#fff6ea',
                     'slogan' => '#f3e6d4',
@@ -167,6 +170,12 @@ class WelcomeTemplateApiTest extends TestCase
                     'slogan' => 2.8,
                     'message' => 2.1,
                     'room' => 1.8,
+                    'wifi' => 2.1,
+                    'wifiPassword' => 1.6,
+                    'time' => 4.1,
+                    'clock' => 1.4,
+                    'weather' => 3.1,
+                    'logo' => 14.5,
                 ],
                 'slots' => [
                     'logo' => ['x' => 10, 'y' => 20, 'visible' => true],
@@ -181,6 +190,8 @@ class WelcomeTemplateApiTest extends TestCase
             ->assertJsonPath('data.templates.1.layout.tone', 'warm')
             ->assertJsonPath('data.templates.1.layout.font', 'outfit')
             ->assertJsonPath('data.templates.1.layout.slogan', 'Kỳ nghỉ bắt đầu từ đây')
+            ->assertJsonPath('data.templates.1.layout.lead', 'Chào mừng đến nhà.')
+            ->assertJsonPath('data.templates.1.layout.wish', 'Chúc quý khách nghỉ ngơi thật thoải mái.')
             ->assertJsonPath('data.templates.1.layout.background.gallery_id', 'sunlit')
             ->assertJsonPath('data.templates.1.layout.colors.name', '#fff6ea')
             ->assertJsonPath('data.templates.1.layout.colors.slogan', '#f3e6d4')
@@ -189,6 +200,12 @@ class WelcomeTemplateApiTest extends TestCase
             ->assertJsonPath('data.templates.1.layout.sizes.slogan', 2.8)
             ->assertJsonPath('data.templates.1.layout.sizes.message', 2.1)
             ->assertJsonPath('data.templates.1.layout.sizes.room', 1.8)
+            ->assertJsonPath('data.templates.1.layout.sizes.wifi', 2.1)
+            ->assertJsonPath('data.templates.1.layout.sizes.wifiPassword', 1.6)
+            ->assertJsonPath('data.templates.1.layout.sizes.time', 4.1)
+            ->assertJsonPath('data.templates.1.layout.sizes.clock', 1.4)
+            ->assertJsonPath('data.templates.1.layout.sizes.weather', 3.1)
+            ->assertJsonPath('data.templates.1.layout.sizes.logo', 14.5)
             ->assertJsonPath('data.templates.1.layout.slots.name.x', 12);
 
         $this->patchJson("/api/cms/hotels/{$hotel->id}/welcome-templates/linen", [

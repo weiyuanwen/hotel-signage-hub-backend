@@ -110,6 +110,12 @@ class PairingService
             $device = $pairing->device()->lockForUpdate()->firstOrFail();
             $hotel = Hotel::query()->lockForUpdate()->findOrFail($room->hotel_id);
 
+            if (! $hotel->subscriptionActive()) {
+                throw ValidationException::withMessages([
+                    'code' => 'Gói đã hết hạn. Gia hạn để tiếp tục dùng.',
+                ]);
+            }
+
             if (! $hotel->hasDeviceCapacity()) {
                 throw ValidationException::withMessages([
                     'code' => 'Gói hiện tại đã đủ số TV. Nâng cấp để ghép thêm.',
@@ -152,6 +158,12 @@ class PairingService
             ]);
         }
 
+        if (! $hotel->subscriptionActive()) {
+            throw ValidationException::withMessages([
+                'room_id' => 'Gói đã hết hạn. Gia hạn để tiếp tục dùng.',
+            ]);
+        }
+
         if (! $hotel->hasDeviceCapacity()) {
             throw ValidationException::withMessages([
                 'room_id' => 'Gói hiện tại đã đủ số TV. Nâng cấp để ghép thêm.',
@@ -185,6 +197,12 @@ class PairingService
             }
 
             $hotel = Hotel::query()->lockForUpdate()->findOrFail($link->hotel_id);
+
+            if (! $hotel->subscriptionActive()) {
+                throw ValidationException::withMessages([
+                    'token' => 'Gói đã hết hạn. Gia hạn để tiếp tục dùng.',
+                ]);
+            }
 
             if (! $hotel->hasDeviceCapacity()) {
                 throw ValidationException::withMessages([

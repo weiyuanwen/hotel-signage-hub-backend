@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\Cms\RoomController;
 use App\Http\Controllers\Api\Cms\RoomMediaController;
 use App\Http\Controllers\Api\Cms\StaffController;
 use App\Http\Controllers\Api\Cms\StayController;
+use App\Http\Controllers\Api\Cms\BillingController;
 use App\Http\Controllers\Api\Cms\WaitlistController;
 use App\Http\Controllers\Api\Cms\WeatherRegionController;
 use App\Http\Controllers\Api\Cms\WelcomeTemplateController;
@@ -22,6 +23,9 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('cms')->group(function () {
     Route::post('login', [AuthController::class, 'login'])->middleware('throttle:cms-login');
     Route::post('waitlist', [WaitlistController::class, 'store'])->middleware('throttle:waitlist');
+    Route::post('billing/checkout', [BillingController::class, 'checkout'])->middleware('throttle:billing-checkout');
+    Route::get('billing/orders/{code}', [BillingController::class, 'show'])->middleware('throttle:billing-poll');
+    Route::post('billing/stripe/webhook', [BillingController::class, 'stripeWebhook']);
 
     Route::middleware(['auth:sanctum', 'auth.cms'])->group(function () {
         Route::get('me', [AuthController::class, 'me']);

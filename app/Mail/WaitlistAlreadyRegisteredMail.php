@@ -17,7 +17,7 @@ class WaitlistAlreadyRegisteredMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Quầy Signage Desk vẫn còn');
+        return new Envelope(subject: 'Quầy SignageHub vẫn còn');
     }
 
     public function content(): Content

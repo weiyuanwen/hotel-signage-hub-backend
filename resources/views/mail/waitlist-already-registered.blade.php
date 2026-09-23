@@ -1,4 +1,4 @@
-<x-mail.shell :preheader="'Quầy Signage Desk của bạn vẫn còn. Đăng nhập bằng mật khẩu hiện tại.'" title="Đăng nhập Signage Desk">
+<x-mail.shell :preheader="'Quầy SignageHub của bạn vẫn còn. Đăng nhập bằng mật khẩu hiện tại.'" title="Đăng nhập SignageHub">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
         <tr>
             <td style="padding:36px 32px 8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;letter-spacing:0.04em;color:#c9b8a0;">
@@ -12,7 +12,7 @@
         </tr>
         <tr>
             <td style="padding:0 32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:16px;line-height:1.55;color:#d8cfc3;">
-                {{ $user->email }} đã có tài khoản Signage Desk. Vào bằng mật khẩu hiện tại, không cần mở quầy mới.
+                {{ $user->email }} đã có tài khoản SignageHub. Vào bằng mật khẩu hiện tại, không cần mở quầy mới.
             </td>
         </tr>
         <tr>

@@ -1,0 +1,30 @@
+name: Deploy VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: signagehub-vps-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.repository_owner == 'weiyuanwen' && github.ref == 'refs/heads/main'
+    runs-on: self-hosted
+    steps:
+      - name: Pull backend and rebuild
+        run: |
+          set -euo pipefail
+          cd "$HOME/hotel-signage-hub-backend"
+          if [ -x deploy/pull-and-up.sh ]; then
+            exec deploy/pull-and-up.sh
+          fi
+          flock /tmp/signagehub-deploy.lock bash -c '
+            git fetch origin main
+            git checkout -q main
+            git reset --hard origin/main
+            cd deploy
+            docker compose up -d --build
+          '

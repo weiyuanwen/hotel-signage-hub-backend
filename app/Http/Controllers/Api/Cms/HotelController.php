@@ -29,7 +29,7 @@ class HotelController extends Controller
         }
 
         return response()->json([
-            'data' => $query->get(['id', 'name', 'slug', 'default_locale', 'plan', 'device_limit'])
+            'data' => $query->get(['id', 'name', 'slug', 'default_locale', 'plan', 'device_limit', 'subscription_expires_at'])
                 ->map(fn (Hotel $hotel) => [
                     'id' => $hotel->id,
                     'name' => $hotel->name,

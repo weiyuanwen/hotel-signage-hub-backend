@@ -141,7 +141,8 @@ class PairingAndHeartbeatTest extends TestCase
 
         $this->postJson('/api/device/heartbeat')
             ->assertOk()
-            ->assertJsonPath('online', true);
+            ->assertJsonPath('online', true)
+            ->assertJsonPath('content_revision', $room->content_revision);
 
         $this->assertNull($device->fresh()->last_seen_at);
         $this->assertTrue(app(HeartbeatService::class)->isOnline($device->id));

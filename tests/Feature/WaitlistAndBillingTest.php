@@ -38,7 +38,7 @@ class WaitlistAndBillingTest extends TestCase
         $this->assertNotNull($hotel);
         $this->assertSame('Nhà khách Sông Hàn', $hotel->name);
         $this->assertSame(HotelPlan::FREE, $hotel->plan);
-        $this->assertSame(3, $hotel->device_limit);
+        $this->assertSame(1, $hotel->device_limit);
         $this->assertSame('pin', $hotel->pairingMode());
 
         Mail::assertSent(WaitlistCredentialsMail::class, function (WaitlistCredentialsMail $mail) use ($user) {
@@ -46,19 +46,19 @@ class WaitlistAndBillingTest extends TestCase
         });
     }
 
-    public function test_waitlist_standard_plan_gets_link_pairing_and_twenty_devices(): void
+    public function test_waitlist_paid_plan_still_starts_as_free_one_tv(): void
     {
         Mail::fake();
 
         $this->postJson('/api/cms/waitlist', [
             'email' => 'quanly@bayside.test',
             'plan' => HotelPlan::STANDARD,
-        ])->assertCreated();
+        ])->assertCreated()->assertJsonPath('plan', HotelPlan::STANDARD);
 
         $hotel = User::query()->where('email', 'quanly@bayside.test')->first()?->hotels()->first();
-        $this->assertSame(HotelPlan::STANDARD, $hotel?->plan);
-        $this->assertSame(20, $hotel?->device_limit);
-        $this->assertSame('link', $hotel?->pairingMode());
+        $this->assertSame(HotelPlan::FREE, $hotel?->plan);
+        $this->assertSame(1, $hotel?->device_limit);
+        $this->assertSame('pin', $hotel?->pairingMode());
     }
 
     public function test_existing_email_gets_reminder_instead_of_a_second_hotel(): void
@@ -103,7 +103,7 @@ class WaitlistAndBillingTest extends TestCase
 
     public function test_standard_plan_issues_a_link_and_tv_consumes_it(): void
     {
-        $hotel = Hotel::factory()->create(['plan' => HotelPlan::STANDARD, 'device_limit' => 20]);
+        $hotel = Hotel::factory()->create(['plan' => HotelPlan::PREMIUM, 'device_limit' => null]);
         $room = Room::factory()->create(['hotel_id' => $hotel->id]);
         $staff = $this->staff('hotel-manager', $hotel);
 
@@ -135,7 +135,7 @@ class WaitlistAndBillingTest extends TestCase
 
     public function test_free_plan_cannot_create_pairing_links(): void
     {
-        $hotel = Hotel::factory()->create(['plan' => HotelPlan::FREE, 'device_limit' => 3]);
+        $hotel = Hotel::factory()->create(['plan' => HotelPlan::FREE, 'device_limit' => 1]);
         $room = Room::factory()->create(['hotel_id' => $hotel->id]);
         Sanctum::actingAs($this->staff('hotel-manager', $hotel));
 
@@ -146,7 +146,7 @@ class WaitlistAndBillingTest extends TestCase
 
     public function test_hotel_index_includes_plan_quota(): void
     {
-        $hotel = Hotel::factory()->create(['plan' => HotelPlan::FREE, 'device_limit' => 3]);
+        $hotel = Hotel::factory()->create(['plan' => HotelPlan::FREE, 'device_limit' => 1]);
         $room = Room::factory()->create(['hotel_id' => $hotel->id]);
         Device::factory()->paired($hotel, $room)->create();
         Sanctum::actingAs($this->staff('hotel-manager', $hotel));
@@ -154,9 +154,66 @@ class WaitlistAndBillingTest extends TestCase
         $this->getJson('/api/cms/hotels')
             ->assertOk()
             ->assertJsonPath('data.0.plan', HotelPlan::FREE)
-            ->assertJsonPath('data.0.device_limit', 3)
+            ->assertJsonPath('data.0.device_limit', 1)
             ->assertJsonPath('data.0.pairing_mode', 'pin')
+            ->assertJsonPath('data.0.allows_pairing_links', false)
             ->assertJsonPath('data.0.paired_device_count', 1)
-            ->assertJsonPath('data.0.plan_label', 'Miễn phí mãi');
+            ->assertJsonPath('data.0.plan_label', 'Miễn phí 1 TV');
+    }
+
+    public function test_credentials_mail_lists_features_for_each_plan(): void
+    {
+        $cases = [
+            HotelPlan::FREE => ['1 TV', 'mã PIN', 'Không hết hạn'],
+            HotelPlan::STANDARD => ['3 TV', 'mã PIN', 'Nền phòng'],
+            HotelPlan::PREMIUM => ['Không giới hạn', 'PIN hoặc link', 'Nền phòng'],
+        ];
+
+        foreach ($cases as $plan => $needles) {
+            $hotel = Hotel::factory()->create([
+                'plan' => $plan,
+                'device_limit' => HotelPlan::deviceLimit($plan),
+            ]);
+            $user = User::factory()->create();
+            $mail = new WaitlistCredentialsMail($user, $hotel, 'tmp-pass');
+            $html = $mail->render();
+            foreach ($needles as $needle) {
+                $this->assertStringContainsString($needle, $html, "plan {$plan} missing {$needle}");
+            }
+            if ($plan === HotelPlan::PREMIUM) {
+                $this->assertStringContainsString('cả hai', $html);
+            }
+            if ($plan !== HotelPlan::PREMIUM) {
+                $this->assertStringNotContainsString('PIN hoặc link', $html);
+            }
+        }
+    }
+
+    public function test_premium_hotel_exposes_pin_and_link_pairing(): void
+    {
+        $hotel = Hotel::factory()->create(['plan' => HotelPlan::PREMIUM, 'device_limit' => null]);
+        Sanctum::actingAs($this->staff('hotel-manager', $hotel));
+
+        $this->getJson('/api/cms/hotels')
+            ->assertOk()
+            ->assertJsonPath('data.0.plan', HotelPlan::PREMIUM)
+            ->assertJsonPath('data.0.plan_label', 'Nhiều TV')
+            ->assertJsonPath('data.0.pairing_mode', 'link')
+            ->assertJsonPath('data.0.allows_pairing_links', true)
+            ->assertJsonPath('data.0.device_limit', null);
+    }
+
+    public function test_standard_hotel_is_three_tvs_pin_only(): void
+    {
+        $hotel = Hotel::factory()->create(['plan' => HotelPlan::STANDARD, 'device_limit' => 3]);
+        Sanctum::actingAs($this->staff('hotel-manager', $hotel));
+
+        $this->getJson('/api/cms/hotels')
+            ->assertOk()
+            ->assertJsonPath('data.0.plan', HotelPlan::STANDARD)
+            ->assertJsonPath('data.0.plan_label', '3 TV')
+            ->assertJsonPath('data.0.pairing_mode', 'pin')
+            ->assertJsonPath('data.0.allows_pairing_links', false)
+            ->assertJsonPath('data.0.device_limit', 3);
     }
 }

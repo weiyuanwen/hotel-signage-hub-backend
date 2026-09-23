@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureCmsUser;
 use App\Http\Middleware\EnsureDevice;
 use App\Http\Middleware\EnsureHotelScope;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -26,6 +27,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.device' => EnsureDevice::class,
             'hotel.scope' => EnsureHotelScope::class,
         ]);
+    })
+    ->withSchedule(function (Schedule $schedule): void {
+        $schedule->command('billing:poll-bank')->everyFifteenSeconds()->withoutOverlapping();
+        $schedule->command('billing:expire-hotels')->hourly();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

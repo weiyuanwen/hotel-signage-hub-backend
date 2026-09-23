@@ -40,6 +40,10 @@ class TemplateGallery
                 'url' => 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1920&q=80',
                 'mood' => 'stone',
             ],
+            'suite' => [
+                'url' => 'https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=1920&q=80',
+                'mood' => 'vista',
+            ],
         ];
     }
 
@@ -60,6 +64,7 @@ class TemplateGallery
             'harbor' => 'coastal',
             'garden' => 'garden',
             'stone' => 'lobby',
+            'vista' => 'suite',
             default => 'terrace',
         };
     }

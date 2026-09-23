@@ -18,6 +18,11 @@ class TemplateLayout
         return ['geist', 'be-vietnam', 'outfit', 'cormorant'];
     }
 
+    public static function compositions(): array
+    {
+        return ['full', 'split'];
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -29,6 +34,7 @@ class TemplateLayout
             'garden' => ['name' => '#243028', 'slogan' => '#3d4a3e', 'muted' => '#5a665c'],
             'harbor' => ['name' => '#f4efe4', 'slogan' => '#e4ddd0', 'muted' => '#c8c2b4'],
             'stone' => ['name' => '#f3eadc', 'slogan' => '#e2d6c4', 'muted' => '#c4b8a6'],
+            'vista' => ['name' => '#d4b07a', 'slogan' => '#e8dfd0', 'muted' => '#c4b8a6'],
             default => ['name' => '#f4efe6', 'slogan' => '#e8dfd0', 'muted' => '#cfc4b4'],
         };
         $slots = match ($key) {
@@ -53,6 +59,13 @@ class TemplateLayout
                 'message' => ['x' => 22, 'y' => 68, 'visible' => true],
                 'room' => ['x' => 46, 'y' => 88],
             ],
+            'vista' => [
+                'logo' => ['x' => 6, 'y' => 12, 'visible' => true],
+                'name' => ['x' => 6, 'y' => 30],
+                'slogan' => ['x' => 6, 'y' => 66, 'visible' => true],
+                'message' => ['x' => 6, 'y' => 50, 'visible' => true],
+                'room' => ['x' => 6, 'y' => 86],
+            ],
             default => [
                 'logo' => ['x' => 8, 'y' => 16, 'visible' => true],
                 'name' => ['x' => 8, 'y' => 40],
@@ -67,11 +80,13 @@ class TemplateLayout
                 'source' => 'gallery',
                 'gallery_id' => $galleryId,
             ],
+            'composition' => $key === 'vista' ? 'split' : 'full',
             'tone' => match ($key) {
                 'linen' => 'soft',
                 'harbor' => 'cool',
                 'garden' => 'warm',
                 'stone' => 'contrast',
+                'vista' => 'contrast',
                 default => 'warm',
             },
             'font' => match ($key) {
@@ -79,25 +94,34 @@ class TemplateLayout
                 'harbor' => 'outfit',
                 'garden' => 'cormorant',
                 'stone' => 'cormorant',
+                'vista' => 'cormorant',
                 default => 'geist',
             },
             'colors' => $colors,
             'sizes' => self::defaultSizes($key),
             'slogan' => '',
+            'lead' => $key === 'vista' ? 'Chúng tôi rất hân hạnh chào đón quý khách.' : 'Chào mừng quý khách',
+            'wish' => $key === 'vista' ? 'Chúc quý khách kỳ nghỉ thư thái và đáng nhớ.' : 'Chúc quý khách có những trải nghiệm tuyệt vời.',
             'slots' => $slots,
         ];
     }
 
     /**
-     * @return array{name: float, slogan: float, message: float, room: float}
+     * @return array{name: float, slogan: float, message: float, room: float, wifi: float, wifiPassword: float, time: float, clock: float, weather: float, logo: float}
      */
     public static function defaultSizes(string $key): array
     {
         return [
-            'name' => ($key === 'garden' || $key === 'stone') ? 5.4 : 4.5,
-            'slogan' => 2.2,
+            'name' => ($key === 'garden' || $key === 'stone') ? 5.4 : ($key === 'vista' ? 3.8 : 4.5),
+            'slogan' => $key === 'vista' ? 1.8 : 2.2,
             'message' => 1.7,
             'room' => 1.4,
+            'wifi' => 1.5,
+            'wifiPassword' => 1.2,
+            'time' => 3.4,
+            'clock' => 1.2,
+            'weather' => 3.4,
+            'logo' => $key === 'vista' ? 8.0 : 11.0,
         ];
     }
 
@@ -112,6 +136,9 @@ class TemplateLayout
             return $base;
         }
 
+        $composition = is_string($raw['composition'] ?? null) && in_array($raw['composition'], self::compositions(), true)
+            ? $raw['composition']
+            : $base['composition'];
         $tone = is_string($raw['tone'] ?? null) && in_array($raw['tone'], self::tones(), true)
             ? $raw['tone']
             : $base['tone'];
@@ -119,6 +146,12 @@ class TemplateLayout
             ? $raw['font']
             : $base['font'];
         $slogan = is_string($raw['slogan'] ?? null) ? mb_substr(trim($raw['slogan']), 0, 80) : $base['slogan'];
+        $lead = array_key_exists('lead', $raw) && is_string($raw['lead'])
+            ? mb_substr(trim($raw['lead']), 0, 120)
+            : $base['lead'];
+        $wish = array_key_exists('wish', $raw) && is_string($raw['wish'])
+            ? mb_substr(trim($raw['wish']), 0, 120)
+            : $base['wish'];
 
         $bg = is_array($raw['background'] ?? null) ? $raw['background'] : [];
         $source = ($bg['source'] ?? '') === 'upload' ? 'upload' : 'gallery';
@@ -141,6 +174,12 @@ class TemplateLayout
             'slogan' => self::size($sizesIn['slogan'] ?? null, $sizeBase['slogan'], 1.2, 4.5),
             'message' => self::size($sizesIn['message'] ?? null, $sizeBase['message'], 1.0, 3.5),
             'room' => self::size($sizesIn['room'] ?? null, $sizeBase['room'], 0.8, 3.0),
+            'wifi' => self::size($sizesIn['wifi'] ?? null, $sizeBase['wifi'], 0.8, 3.5),
+            'wifiPassword' => self::size($sizesIn['wifiPassword'] ?? null, $sizeBase['wifiPassword'], 0.6, 3.0),
+            'time' => self::size($sizesIn['time'] ?? null, $sizeBase['time'], 1.5, 6.0),
+            'clock' => self::size($sizesIn['clock'] ?? null, $sizeBase['clock'], 0.7, 2.4),
+            'weather' => self::size($sizesIn['weather'] ?? null, $sizeBase['weather'], 1.5, 6.0),
+            'logo' => self::size($sizesIn['logo'] ?? null, $sizeBase['logo'], 4.0, 28.0),
         ];
 
         $slotsIn = is_array($raw['slots'] ?? null) ? $raw['slots'] : [];
@@ -157,11 +196,14 @@ class TemplateLayout
                 'source' => $source,
                 'gallery_id' => $galleryId,
             ],
+            'composition' => $composition,
             'tone' => $tone,
             'font' => $font,
             'colors' => $colors,
             'sizes' => $sizes,
             'slogan' => $slogan,
+            'lead' => $lead,
+            'wish' => $wish,
             'slots' => $slots,
         ];
     }
@@ -178,6 +220,9 @@ class TemplateLayout
         }
         if (isset($raw['font']) && ! in_array($raw['font'], self::fonts(), true)) {
             $errors['layout.font'] = 'Font không hợp lệ.';
+        }
+        if (isset($raw['composition']) && ! in_array($raw['composition'], self::compositions(), true)) {
+            $errors['layout.composition'] = 'Bố cục không hợp lệ.';
         }
         $bg = is_array($raw['background'] ?? null) ? $raw['background'] : [];
         if (isset($bg['gallery_id']) && TemplateGallery::url((string) $bg['gallery_id']) === null) {

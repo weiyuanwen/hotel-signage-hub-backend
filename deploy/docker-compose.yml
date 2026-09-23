@@ -21,6 +21,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    networks:
+      - default
+      - vps-internal
     restart: unless-stopped
 
   reverb:
@@ -65,6 +68,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    networks:
+      - default
+      - vps-internal
     restart: unless-stopped
 
   scheduler:
@@ -84,6 +90,9 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    networks:
+      - default
+      - vps-internal
     restart: unless-stopped
 
   mysql:
@@ -108,6 +117,22 @@ services:
     volumes:
       - redis-data:/data
     restart: unless-stopped
+
+  adminer:
+    image: adminer:4
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+      ADMINER_DESIGN: pepa-linha
+    ports:
+      - "100.125.150.56:9084:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  vps-internal:
+    external: true
 
 volumes:
   mysql-data:

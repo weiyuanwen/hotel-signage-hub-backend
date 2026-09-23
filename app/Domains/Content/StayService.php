@@ -4,6 +4,7 @@ namespace App\Domains\Content;
 
 use App\Domains\Device\ScreenDataBuilder;
 use App\Domains\Realtime\Events\RoomContentUpdated;
+use App\Domains\Realtime\SafeBroadcast;
 use App\Models\Hotel;
 use App\Models\Room;
 use App\Models\User;
@@ -143,6 +144,6 @@ class StayService
     private function broadcast(Room $room): void
     {
         $hotel = $room->hotel;
-        event(new RoomContentUpdated($room, $this->screenData->forRoom($hotel, $room)));
+        SafeBroadcast::send(new RoomContentUpdated($room, $this->screenData->forRoom($hotel, $room)));
     }
 }

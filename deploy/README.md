@@ -1,13 +1,16 @@
-# Deploy backend (VPS + Cloudflare Tunnel)
+# Deploy (VPS + Cloudflare Tunnel)
 
-CMS và player ở Vercel. Folder này chỉ chạy **Laravel + MySQL + Redis + Reverb** trên Dell Ubuntu 24. Tunnel **`homelab`** đã có trên máy — không chạy thêm `cloudflared`.
+Toàn bộ Signage Hub chạy trên Dell Ubuntu 24 qua tunnel **`homelab`**. Không dùng Vercel. Không chạy thêm `cloudflared`.
 
 | Public | Nội bộ VPS |
 |---|---|
-| `https://api.onthilaixe.online` | `127.0.0.1:9080` |
-| `wss://ws.onthilaixe.online` | `127.0.0.1:9081` |
+| `https://signagehub.online` | CMS Next.js `127.0.0.1:9082` |
+| `https://www.signagehub.online` | CMS `127.0.0.1:9082` |
+| `https://app.signagehub.online` | TV player `127.0.0.1:9083` |
+| `https://api.signagehub.online` | Laravel `127.0.0.1:9080` |
+| `wss://ws.signagehub.online` | Reverb `127.0.0.1:9081` |
 
-Cổng 80 / 3000 / 8000 / 8080 giữ cho Asiagiving.
+`api.onthilaixe.online` / `ws.onthilaixe.online` vẫn trỏ cùng cổng 9080/9081. Cổng 80 / 3000 / 8000 / 8080 giữ cho Asiagiving.
 
 ## Một lần trên VPS
 
@@ -22,7 +25,7 @@ chmod +x setup.sh
 ./setup.sh
 ```
 
-Cập nhật sau này:
+Cập nhật sau này: **push `main` là đủ**. GitHub Actions runner trên VPS (`self-hosted`) chạy `deploy/pull-and-up.sh`. Cron mỗi phút (`deploy/watch-repos.sh`) kéo backend + CMS + player nếu runner tắt.
 
 ```bash
 cd ~/hotel-signage-hub-backend
@@ -33,48 +36,71 @@ docker compose up -d --build
 
 ## Tunnel `homelab`
 
-Cách A — dashboard Cloudflare Zero Trust → Networks → Tunnels → **homelab** → Public hostname:
+`signagehub.online` phải nằm **cùng tài khoản Cloudflare** với tunnel `homelab` (cùng account với `asiagiving.org` / `onthilaixe.online`). CNAME ngoài account đó không đi vào tunnel.
 
-- `api.onthilaixe.online` → `http://localhost:9080`
-- `ws.onthilaixe.online` → `http://localhost:9081`
+DNS trong zone `signagehub.online` (proxied, CNAME flattening cho apex):
 
-Cách B — sửa file (cần sudo). Chèn nội dung `cloudflared.ingress.yml` **trước** `http_status:404` trong `/etc/cloudflared/config.yml`, rồi:
+| Name | Type | Target |
+|---|---|---|
+| `@` | CNAME | `cfa2cf84-48fd-4eee-88b0-d62f468cd69f.cfargotunnel.com` |
+| `www` | CNAME | `cfa2cf84-48fd-4eee-88b0-d62f468cd69f.cfargotunnel.com` |
+| `app` | CNAME | `cfa2cf84-48fd-4eee-88b0-d62f468cd69f.cfargotunnel.com` |
+| `api` | CNAME | `cfa2cf84-48fd-4eee-88b0-d62f468cd69f.cfargotunnel.com` |
+| `ws` | CNAME | `cfa2cf84-48fd-4eee-88b0-d62f468cd69f.cfargotunnel.com` |
+
+Xóa A `@` → `76.76.21.21` (Vercel). Không A về IP WAN nhà.
+
+Ingress (cần sudo trên VPS):
 
 ```bash
-sudo cloudflared tunnel ingress validate
-sudo systemctl restart cloudflared
+~/hotel-signage-hub-backend/deploy/apply-tunnel.sh
 ```
 
 Không sửa hostname Asiagiving.
 
-## Vercel
+## CMS và player trên cùng VPS
 
-**CMS** (`hotel-signage-hub-cms`):
+```bash
+# CMS
+cd ~/hotel-signage-hub-cms/deploy
+docker compose up -d --build
 
-```
-NEXT_PUBLIC_API_URL=https://api.onthilaixe.online/api
-```
-
-**Player** (`hotel-signage-hub-player`):
-
-```
-VITE_API_URL=https://api.onthilaixe.online/api
-VITE_REVERB_HOST=ws.onthilaixe.online
-VITE_REVERB_PORT=443
-VITE_REVERB_SCHEME=https
-VITE_REVERB_APP_KEY=<cùng REVERB_APP_KEY trong deploy/.env>
+# Player — VITE_REVERB_APP_KEY lấy từ backend deploy/.env
+cd ~/hotel-signage-hub-player/deploy
+docker compose up -d --build
 ```
 
-Deploy lại player sau khi set env (Vite bake lúc build).
+Production: CMS gọi `/cms` cùng origin (Next rewrite → `:9080`). Player gọi `/api` cùng origin (nginx proxy → `:9080`). Reverb bake lúc build: `ws.signagehub.online:443`.
 
 ## Kiểm tra
 
 ```bash
 curl -sS http://127.0.0.1:9080/up
-curl -sSI https://api.onthilaixe.online/up
+curl -sS http://127.0.0.1:9082/ | head
+curl -sS http://127.0.0.1:9083/ | head
+curl -sSI https://signagehub.online
+curl -sSI https://api.signagehub.online/up
 ```
 
 Seed demo: `docker compose exec app php artisan db:seed --force`
+
+## Xem database (Adminer)
+
+Chỉ mở qua Tailscale, không public:
+
+`http://100.125.150.56:9084`
+
+- System: `MySQL`
+- Server: `mysql`
+- Username / password / database: `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE` trong `~/hotel-signage-hub-backend/deploy/.env`
+
+Bảng thanh toán: `billing_orders`, `billing_transactions`. Hạn gói: `hotels.plan`, `hotels.device_limit`, `hotels.subscription_expires_at`.
+
+Webhook Stripe (tuỳ chọn, poll session vẫn xác nhận thanh toán):
+
+`https://api.signagehub.online/api/cms/billing/stripe/webhook`
+
+Điền `STRIPE_WEBHOOK_SECRET` vào `deploy/.env` rồi `docker compose up -d app queue scheduler`.
 
 ## Ghi chú
 
