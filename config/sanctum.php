@@ -44,13 +44,24 @@ return [
     | Expiration Minutes
     |--------------------------------------------------------------------------
     |
-    | This value controls the number of minutes until an issued token will be
-    | considered expired. This will override any values set in the token's
-    | "expires_at" attribute, but first-party sessions are not affected.
+    | Leave this null so each token uses its own expires_at. A global
+    | value here would override cms and device lifetimes below.
     |
     */
 
     'expiration' => null,
+
+    /*
+    | Desk bearer tokens. Front desk signs in again after this many minutes.
+    */
+
+    'cms_expiration_minutes' => max(1, (int) env('SANCTUM_CMS_EXPIRATION', 60 * 24 * 7)),
+
+    /*
+    | TV bearer tokens. Heartbeat slides the expiry while the screen is online.
+    */
+
+    'device_expiration_minutes' => max(1, (int) env('SANCTUM_DEVICE_EXPIRATION', 60 * 24 * 30)),
 
     /*
     |--------------------------------------------------------------------------

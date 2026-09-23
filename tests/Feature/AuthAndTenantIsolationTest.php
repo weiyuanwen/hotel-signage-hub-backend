@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Hotel;
 use App\Models\Room;
+use Laravel\Sanctum\PersonalAccessToken;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\CreatesStaff;
 use Tests\TestCase;
@@ -17,7 +18,7 @@ class AuthAndTenantIsolationTest extends TestCase
         $hotel = Hotel::factory()->create();
         $user = $this->staff('receptionist', $hotel);
 
-        $this->postJson('/api/cms/login', [
+        $response = $this->postJson('/api/cms/login', [
             'email' => $user->email,
             'password' => 'password',
         ])
@@ -25,6 +26,21 @@ class AuthAndTenantIsolationTest extends TestCase
             ->assertJsonPath('user.email', $user->email)
             ->assertJsonPath('user.roles.0', 'receptionist')
             ->assertJsonStructure(['token']);
+
+        $tokenId = (int) explode('|', (string) $response->json('token'), 2)[0];
+        $token = PersonalAccessToken::query()->findOrFail($tokenId);
+        $this->assertNotNull($token->expires_at);
+        $this->assertTrue($token->expires_at->greaterThan(now()->addDays(6)));
+        $this->assertTrue($token->expires_at->lessThan(now()->addDays(8)));
+    }
+
+    public function test_expired_cms_token_is_rejected(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $user = $this->staff('receptionist', $hotel);
+        $plain = $user->createToken('cms', ['cms'], now()->subMinute())->plainTextToken;
+
+        $this->withToken($plain)->getJson('/api/cms/me')->assertUnauthorized();
     }
 
     public function test_receptionist_cannot_see_other_hotel(): void

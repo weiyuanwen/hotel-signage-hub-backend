@@ -2,6 +2,7 @@
 
 namespace App\Domains\Device;
 
+use App\Domains\Auth\AccessTokenFactory;
 use App\Domains\Realtime\Events\DeviceCommandIssued;
 use App\Models\Device;
 use App\Models\DevicePairingCode;
@@ -9,13 +10,17 @@ use App\Models\DevicePairingLink;
 use App\Models\Hotel;
 use App\Models\Room;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class PairingService
 {
-    public function __construct(private PairingCodeGenerator $codes) {}
+    public function __construct(
+        private PairingCodeGenerator $codes,
+        private AccessTokenFactory $tokens,
+    ) {}
 
     /**
      * @return array{device: Device, code: DevicePairingCode}
@@ -36,6 +41,8 @@ class PairingService
                 'expires_at' => now()->addSeconds(90),
             ]);
 
+            Cache::put($this->cacheKey($code), ['status' => 'pending'], 90);
+
             return ['device' => $device, 'code' => $pairing];
         });
     }
@@ -45,46 +52,16 @@ class PairingService
      */
     public function poll(string $code): array
     {
-        return DB::transaction(function () use ($code) {
-            $pairing = DevicePairingCode::query()->where('code', $code)->lockForUpdate()->first();
+        $cached = Cache::get($this->cacheKey($code));
+        if (is_array($cached) && ($cached['status'] ?? null) === 'pending') {
+            return ['status' => 'pending'];
+        }
 
-            if (! $pairing || ($pairing->isExpired() && $pairing->claimed_at === null)) {
-                throw ValidationException::withMessages([
-                    'code' => 'Pairing code is invalid or expired.',
-                ]);
-            }
+        if (is_array($cached) && ($cached['status'] ?? null) === 'paired') {
+            return $this->issueTokenIfNeeded($code, $cached);
+        }
 
-            if ($pairing->isPending()) {
-                return ['status' => 'pending'];
-            }
-
-            $device = $pairing->device()->lockForUpdate()->firstOrFail();
-
-            if (! $device->isPaired()) {
-                return ['status' => 'pending'];
-            }
-
-            $payload = [
-                'status' => 'paired',
-                'device_id' => $device->id,
-                'hotel_id' => (int) $device->hotel_id,
-                'room_id' => (int) $device->room_id,
-            ];
-
-            if ($device->tokens()->exists()) {
-                return $payload;
-            }
-
-            if ($pairing->claimed_at === null || $pairing->claimed_at->lt(now()->subMinutes(2))) {
-                throw ValidationException::withMessages([
-                    'code' => 'Pairing code is invalid or expired.',
-                ]);
-            }
-
-            $payload['token'] = $device->createToken('tv', ['device'])->plainTextToken;
-
-            return $payload;
-        });
+        return $this->pollFromDatabase($code);
     }
 
     public function claim(string $code, Room $room, User $actor): Device
@@ -134,7 +111,10 @@ class PairingService
                 'claimed_by' => $actor->id,
             ])->save();
 
-            return $device->fresh();
+            $fresh = $device->fresh() ?? $device;
+            $this->rememberPaired($code, $fresh);
+
+            return $fresh;
         });
     }
 
@@ -233,7 +213,7 @@ class PairingService
 
             return [
                 'status' => 'paired',
-                'token' => $device->createToken('tv', ['device'])->plainTextToken,
+                'token' => $this->tokens->device($device),
                 'device_id' => $device->id,
                 'hotel_id' => $hotel->id,
                 'room_id' => $room->id,
@@ -249,6 +229,106 @@ class PairingService
         ])->save();
 
         event(new DeviceCommandIssued($device, 'unpair'));
+    }
+
+    /**
+     * @param  array{status?: string, device_id?: int, hotel_id?: int, room_id?: int}  $hint
+     * @return array{status: string, token?: string, device_id?: int, hotel_id?: int, room_id?: int}
+     */
+    private function issueTokenIfNeeded(string $code, array $hint): array
+    {
+        return DB::transaction(function () use ($code, $hint) {
+            $pairing = DevicePairingCode::query()->where('code', $code)->lockForUpdate()->first();
+            $device = $pairing?->device()->lockForUpdate()->first();
+
+            if (! $pairing || ! $device || ! $device->isPaired()) {
+                return $this->pairedPayload($hint);
+            }
+
+            $payload = $this->pairedPayload([
+                'device_id' => $device->id,
+                'hotel_id' => (int) $device->hotel_id,
+                'room_id' => (int) $device->room_id,
+            ]);
+
+            if ($device->tokens()->exists()) {
+                return $payload;
+            }
+
+            if ($pairing->claimed_at === null || $pairing->claimed_at->lt(now()->subMinutes(2))) {
+                throw ValidationException::withMessages([
+                    'code' => 'Pairing code is invalid or expired.',
+                ]);
+            }
+
+            $payload['token'] = $this->tokens->device($device);
+
+            return $payload;
+        });
+    }
+
+    /**
+     * @return array{status: string, token?: string, device_id?: int, hotel_id?: int, room_id?: int}
+     */
+    private function pollFromDatabase(string $code): array
+    {
+        $pairing = DevicePairingCode::query()->where('code', $code)->first();
+
+        if (! $pairing || ($pairing->isExpired() && $pairing->claimed_at === null)) {
+            throw ValidationException::withMessages([
+                'code' => 'Pairing code is invalid or expired.',
+            ]);
+        }
+
+        if ($pairing->isPending()) {
+            Cache::put($this->cacheKey($code), ['status' => 'pending'], 90);
+
+            return ['status' => 'pending'];
+        }
+
+        $device = $pairing->device;
+        if (! $device || ! $device->isPaired()) {
+            return ['status' => 'pending'];
+        }
+
+        $this->rememberPaired($code, $device);
+
+        return $this->issueTokenIfNeeded($code, [
+            'device_id' => $device->id,
+            'hotel_id' => (int) $device->hotel_id,
+            'room_id' => (int) $device->room_id,
+        ]);
+    }
+
+    private function rememberPaired(string $code, Device $device): void
+    {
+        Cache::put($this->cacheKey($code), [
+            'status' => 'paired',
+            'device_id' => $device->id,
+            'hotel_id' => (int) $device->hotel_id,
+            'room_id' => (int) $device->room_id,
+        ], 180);
+    }
+
+    /**
+     * @param  array{device_id?: int, hotel_id?: int, room_id?: int}  $hint
+     * @return array{status: string, device_id?: int, hotel_id?: int, room_id?: int}
+     */
+    private function pairedPayload(array $hint): array
+    {
+        $payload = ['status' => 'paired'];
+        foreach (['device_id', 'hotel_id', 'room_id'] as $field) {
+            if (isset($hint[$field])) {
+                $payload[$field] = (int) $hint[$field];
+            }
+        }
+
+        return $payload;
+    }
+
+    private function cacheKey(string $code): string
+    {
+        return 'pairing:'.$code;
     }
 
     private function uniqueCode(): string

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Cms;
 
+use App\Domains\Auth\AccessTokenFactory;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -11,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    public function __construct(private AccessTokenFactory $tokens) {}
+
     public function login(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -26,7 +29,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken('cms', ['cms'])->plainTextToken;
+        $token = $this->tokens->cms($user);
 
         return response()->json([
             'token' => $token,

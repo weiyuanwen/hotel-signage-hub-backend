@@ -88,6 +88,8 @@ class PairingAndHeartbeatTest extends TestCase
 
         $device = Device::query()->findOrFail($first['device_id']);
         $this->assertSame(1, $device->tokens()->count());
+        $this->assertNotNull($device->tokens()->first()?->expires_at);
+        $this->assertTrue($device->tokens()->first()->expires_at->greaterThan(now()->addDays(20)));
 
         $second = $this->getJson("/api/device/pairing-codes/{$code}")
             ->assertOk()
@@ -146,6 +148,30 @@ class PairingAndHeartbeatTest extends TestCase
 
         $this->assertNull($device->fresh()->last_seen_at);
         $this->assertTrue(app(HeartbeatService::class)->isOnline($device->id));
+    }
+
+    public function test_expired_device_token_is_rejected(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $room = Room::factory()->create(['hotel_id' => $hotel->id]);
+        $device = Device::factory()->paired($hotel, $room)->create();
+        $plain = $device->createToken('tv', ['device'], now()->subMinute())->plainTextToken;
+
+        $this->withToken($plain)->postJson('/api/device/heartbeat')->assertUnauthorized();
+    }
+
+    public function test_heartbeat_renews_device_token_near_expiry(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $room = Room::factory()->create(['hotel_id' => $hotel->id]);
+        $device = Device::factory()->paired($hotel, $room)->create();
+        $issued = $device->createToken('tv', ['device'], now()->addHours(12));
+
+        $this->withToken($issued->plainTextToken)
+            ->postJson('/api/device/heartbeat')
+            ->assertOk();
+
+        $this->assertTrue($issued->accessToken->fresh()->expires_at->greaterThan(now()->addDays(20)));
     }
 
     public function test_unpair_revokes_token_and_broadcasts_device_command(): void

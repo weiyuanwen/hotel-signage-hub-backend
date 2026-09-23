@@ -31,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('billing:poll-bank')->everyFifteenSeconds()->withoutOverlapping();
         $schedule->command('billing:expire-hotels')->hourly();
+        $schedule->command('sanctum:prune-expired --hours=48')->daily();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
