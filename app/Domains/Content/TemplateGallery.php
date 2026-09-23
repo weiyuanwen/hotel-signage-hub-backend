@@ -4,44 +4,53 @@ namespace App\Domains\Content;
 
 class TemplateGallery
 {
+    private const FALLBACK_PUBLIC = 'https://pub-5f8fb64110c5413ab7909c445603eef3.r2.dev';
+
+    public static function publicUrl(string $path): string
+    {
+        $base = rtrim((string) (config('filesystems.disks.r2.url') ?: self::FALLBACK_PUBLIC), '/');
+
+        return $base.'/'.ltrim($path, '/');
+    }
+
     /** @return array<string, array{url: string, mood: string}> */
     public static function all(): array
     {
         return [
             'sunlit' => [
-                'url' => 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1920&q=80',
+                'url' => self::publicUrl('landing/gallery/sunlit.jpg'),
                 'mood' => 'linen',
             ],
             'pool' => [
-                'url' => 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1920&q=80',
+                'url' => self::publicUrl('landing/gallery/pool.jpg'),
                 'mood' => 'dusk',
             ],
             'cafe' => [
-                'url' => 'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=1920&q=80',
+                'url' => self::publicUrl('landing/gallery/cafe.jpg'),
                 'mood' => 'linen',
             ],
             'garden' => [
-                'url' => 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1920&q=80',
+                'url' => self::publicUrl('landing/gallery/garden.jpg'),
                 'mood' => 'garden',
             ],
             'coastal' => [
-                'url' => 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1920&q=80',
+                'url' => self::publicUrl('landing/gallery/coastal.jpg'),
                 'mood' => 'harbor',
             ],
             'lobby' => [
-                'url' => 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1920&q=80',
+                'url' => self::publicUrl('landing/gallery/lobby.jpg'),
                 'mood' => 'stone',
             ],
             'terrace' => [
-                'url' => 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=1920&q=80',
+                'url' => self::publicUrl('landing/gallery/terrace.jpg'),
                 'mood' => 'dusk',
             ],
             'spa' => [
-                'url' => 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1920&q=80',
+                'url' => self::publicUrl('landing/gallery/spa.jpg'),
                 'mood' => 'stone',
             ],
             'suite' => [
-                'url' => 'https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=1920&q=80',
+                'url' => self::publicUrl('landing/gallery/suite.jpg'),
                 'mood' => 'vista',
             ],
         ];

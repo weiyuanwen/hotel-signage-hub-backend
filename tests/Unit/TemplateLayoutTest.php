@@ -116,7 +116,7 @@ class TemplateLayoutTest extends TestCase
         $gallery = TemplateLayout::normalize([
             'background' => ['source' => 'gallery', 'gallery_id' => 'cafe'],
         ], 'harbor');
-        $this->assertStringContainsString('images.unsplash.com', (string) TemplateLayout::resolveBackgroundUrl($gallery, null));
+        $this->assertStringContainsString('landing/gallery/cafe.jpg', (string) TemplateLayout::resolveBackgroundUrl($gallery, null));
     }
 
     public function test_vista_defaults_to_split_suite_and_cormorant(): void

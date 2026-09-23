@@ -319,7 +319,7 @@ class StayAndScreenDataTest extends TestCase
             ->assertJsonPath('guest.display_name', 'Lan')
             ->json();
 
-        $this->assertStringContainsString('images.unsplash.com', $screen['media']['background_url']);
+        $this->assertStringContainsString('landing/gallery/', $screen['media']['background_url']);
         $this->assertStringNotContainsString('hotel-brand.jpg', $screen['media']['background_url']);
 
         Sanctum::actingAs($this->staff('receptionist', $hotel));
