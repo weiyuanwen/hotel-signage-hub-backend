@@ -3,15 +3,18 @@
 namespace App\Domains\Device;
 
 use App\Domains\Content\TemplateLayout;
-use App\Domains\Content\WeatherRegion;
+use App\Domains\Content\WeatherSnapshot;
 use App\Models\Device;
 use App\Models\Hotel;
 use App\Models\HotelWelcomeTemplate;
 use App\Models\MediaAsset;
 use App\Models\Room;
+use Illuminate\Support\Facades\Cache;
 
 class ScreenDataBuilder
 {
+    public function __construct(private WeatherSnapshot $weather) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -43,7 +46,23 @@ class ScreenDataBuilder
     {
         $hotel = $hotel->fresh(['logo', 'defaultMedia']) ?? $hotel;
         $room = $room->fresh(['currentWelcome', 'defaultMedia']) ?? $room;
+        $mediaId = $deviceMedia?->id ?? 0;
+        $cacheKey = sprintf('screen:%d:%d:%d:%d', $hotel->id, $room->id, $room->content_revision, $mediaId);
 
+        $payload = Cache::remember($cacheKey, 120, function () use ($hotel, $room, $deviceMedia) {
+            return $this->compose($hotel, $room, $deviceMedia);
+        });
+
+        $payload['weather'] = $this->weather->for($hotel->weather_region);
+
+        return $payload;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function compose(Hotel $hotel, Room $room, ?MediaAsset $deviceMedia): array
+    {
         $stay = $room->currentWelcome;
         $baseMedia = $deviceMedia ?? $room->defaultMedia ?? $hotel->defaultMedia;
         $useVideo = $stay && $this->isVideo($baseMedia);
@@ -103,7 +122,6 @@ class ScreenDataBuilder
                     ? ($this->isVideo($media) ? 'video' : 'image')
                     : null,
             ],
-            'weather' => WeatherRegion::get($hotel->weather_region),
         ];
     }
 

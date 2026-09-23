@@ -96,6 +96,27 @@ Chỉ mở qua Tailscale, không public:
 
 Bảng thanh toán: `billing_orders`, `billing_transactions`. Hạn gói: `hotels.plan`, `hotels.device_limit`, `hotels.subscription_expires_at`.
 
+## Cloudflare R2 + Redis
+
+Logo, nền khách sạn / phòng / TV, và ảnh mẫu chào upload qua API rồi ghi **Cloudflare R2** (`MEDIA_DISK=r2`). Điền token R2 vào `deploy/.env`:
+
+| Biến | Ý nghĩa |
+|---|---|
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | API token Object Read & Write |
+| `R2_BUCKET` | Tên bucket |
+| `R2_ENDPOINT` | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` |
+| `R2_URL` | URL public, ví dụ `https://media.signagehub.online` hoặc `https://pub-….r2.dev` |
+
+Bật public access (custom domain hoặc r2.dev) và CORS GET/HEAD cho `signagehub.online`, `app.signagehub.online`. Không set ACL `public-read` — R2 không dùng ACL như S3.
+
+Redis (container `redis`) giữ:
+
+- session CMS, queue, rate limit
+- heartbeat TV (`device:{id}:hb`)
+- payload màn hình theo revision (`screen:…`)
+- nhiệt độ Open-Meteo 15 phút (`weather:now:{region}`)
+- trạng thái ghép PIN (`pairing:{code}`)
+
 Webhook Stripe (tuỳ chọn, poll session vẫn xác nhận thanh toán):
 
 `https://api.signagehub.online/api/cms/billing/stripe/webhook`

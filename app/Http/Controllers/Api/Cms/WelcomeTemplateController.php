@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Api\Cms;
 
 use App\Domains\Content\HotelBrandingService;
+use App\Domains\Content\MediaStore;
 use App\Domains\Content\TemplateLayout;
 use App\Domains\Content\WelcomeTemplateCatalog;
 use App\Domains\Content\WelcomeTemplateKey;
 use App\Http\Controllers\Controller;
 use App\Models\Hotel;
 use App\Models\HotelWelcomeTemplate;
-use App\Models\MediaAsset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -128,20 +128,13 @@ class WelcomeTemplateController extends Controller
 
         $file = $request->file('file');
         $ext = strtolower((string) $file->getClientOriginalExtension()) ?: 'jpg';
-        $path = $file->storeAs(
+        $asset = app(MediaStore::class)->createAsset(
+            $hotel->id,
+            'image',
+            $file,
             'hotels/'.$hotel->id.'/templates',
             $template.'-'.uniqid('', true).'.'.$ext,
-            'public',
         );
-
-        $asset = MediaAsset::query()->create([
-            'hotel_id' => $hotel->id,
-            'type' => 'image',
-            'disk' => 'public',
-            'path' => $path,
-            'mime' => (string) $file->getMimeType(),
-            'bytes' => $file->getSize(),
-        ]);
 
         $previous = $row->backgroundMedia;
         $layout = TemplateLayout::normalize($row->layout, $template);

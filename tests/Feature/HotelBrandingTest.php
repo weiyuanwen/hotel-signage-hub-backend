@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Domains\Realtime\Events\RoomContentUpdated;
 use App\Models\Device;
 use App\Models\Hotel;
+use App\Models\MediaAsset;
 use App\Models\Room;
 use Illuminate\Broadcasting\BroadcastException;
 use Illuminate\Contracts\Broadcasting\Factory as BroadcastFactory;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
@@ -78,7 +80,7 @@ class HotelBrandingTest extends TestCase
 
     public function test_receptionist_cannot_patch_branding_or_upload(): void
     {
-        Storage::fake('public');
+        $this->fakeMediaDisk();
         $hotel = Hotel::factory()->create();
         $room = Room::factory()->create(['hotel_id' => $hotel->id]);
         Sanctum::actingAs($this->staff('receptionist', $hotel));
@@ -108,7 +110,7 @@ class HotelBrandingTest extends TestCase
 
     public function test_manager_uploads_logo_and_background(): void
     {
-        Storage::fake('public');
+        $this->fakeMediaDisk();
         Event::fake([RoomContentUpdated::class]);
 
         $hotel = Hotel::factory()->create();
@@ -137,7 +139,7 @@ class HotelBrandingTest extends TestCase
 
     public function test_manager_clears_logo_and_background(): void
     {
-        Storage::fake('public');
+        $this->fakeMediaDisk();
         Event::fake([RoomContentUpdated::class]);
 
         $hotel = Hotel::factory()->create();
@@ -302,5 +304,50 @@ class HotelBrandingTest extends TestCase
         $this->getJson('/api/device/screen')
             ->assertOk()
             ->assertJsonPath('media.background_url', 'https://example.com/hotel-default.mp4');
+    }
+
+    public function test_uploads_use_configured_media_disk(): void
+    {
+        config([
+            'filesystems.media' => 'r2',
+            'filesystems.disks.r2.url' => 'https://media.signagehub.online',
+        ]);
+        Storage::fake('r2');
+        Event::fake([RoomContentUpdated::class]);
+
+        $hotel = Hotel::factory()->create();
+        Sanctum::actingAs($this->staff('hotel-manager', $hotel));
+
+        $this->post("/api/cms/hotels/{$hotel->id}/media", [
+            'purpose' => 'logo',
+            'file' => UploadedFile::fake()->image('logo.png', 120, 40),
+        ], ['Accept' => 'application/json'])->assertCreated();
+
+        $this->assertDatabaseHas('media_assets', [
+            'hotel_id' => $hotel->id,
+            'type' => 'logo',
+            'disk' => 'r2',
+        ]);
+
+        $path = MediaAsset::query()->where('hotel_id', $hotel->id)->where('type', 'logo')->value('path');
+        $this->assertIsString($path);
+        $this->assertTrue(Storage::disk('r2')->exists($path));
+    }
+
+    public function test_screen_includes_cached_weather_reading(): void
+    {
+        config(['services.weather.fetch' => true]);
+        Cache::put('weather:now:da-nang', ['celsius' => 31, 'code' => 1], 900);
+
+        $hotel = Hotel::factory()->create(['weather_region' => 'da-nang']);
+        $room = Room::factory()->create(['hotel_id' => $hotel->id]);
+        $device = Device::factory()->paired($hotel, $room)->create();
+        Sanctum::actingAs($device);
+
+        $this->getJson('/api/device/screen')
+            ->assertOk()
+            ->assertJsonPath('weather.key', 'da-nang')
+            ->assertJsonPath('weather.celsius', 31)
+            ->assertJsonPath('weather.code', 1);
     }
 }

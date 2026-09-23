@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Cms;
 
 use App\Domains\Content\HotelBrandingService;
+use App\Domains\Content\MediaStore;
 use App\Domains\Content\VideoSource;
 use App\Http\Controllers\Controller;
 use App\Models\Hotel;
@@ -32,20 +33,13 @@ class RoomMediaController extends Controller
         $isVideo = str_starts_with($mime, 'video/') || in_array($file->getClientOriginalExtension(), ['mp4', 'webm', 'mov'], true);
         $type = $isVideo ? 'video' : 'image';
         $ext = strtolower((string) $file->getClientOriginalExtension()) ?: ($isVideo ? 'mp4' : 'jpg');
-        $path = $file->storeAs(
+        $asset = app(MediaStore::class)->createAsset(
+            $hotel->id,
+            $type,
+            $file,
             'hotels/'.$hotel->id.'/rooms/'.$room->id,
             'background-'.uniqid('', true).'.'.$ext,
-            'public',
         );
-
-        $asset = MediaAsset::query()->create([
-            'hotel_id' => $hotel->id,
-            'type' => $type,
-            'disk' => 'public',
-            'path' => $path,
-            'mime' => $mime,
-            'bytes' => $file->getSize(),
-        ]);
 
         $branding->assignRoomBackground($room, $asset);
 

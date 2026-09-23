@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Cms;
 use App\Domains\Billing\HotelPlan;
 use App\Domains\Content\HotelBrandingService;
 use App\Domains\Content\WeatherRegion;
+use App\Domains\Content\WeatherSnapshot;
 use App\Http\Controllers\Controller;
 use App\Models\Hotel;
 use App\Models\User;
@@ -117,7 +118,7 @@ class HotelController extends Controller
             'name' => $hotel->name,
             ...$hotel->toPlanPayload(),
             'weather_region' => $hotel->weather_region,
-            'weather' => WeatherRegion::get($hotel->weather_region),
+            'weather' => app(WeatherSnapshot::class)->for($hotel->weather_region),
             'logo_url' => $hotel->logo?->url(),
             'background_url' => $background?->url(),
             'background_kind' => $background?->type === 'video' ? 'video' : ($background ? 'image' : null),

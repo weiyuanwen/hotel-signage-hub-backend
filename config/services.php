@@ -57,6 +57,10 @@ return [
         'cms_url' => env('CMS_URL', 'https://signagehub.online'),
     ],
 
+    'weather' => [
+        'fetch' => env('WEATHER_FETCH', true),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

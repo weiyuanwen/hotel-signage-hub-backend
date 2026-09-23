@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Hotel;
 use App\Models\HotelWelcomeTemplate;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\CreatesStaff;
 use Tests\TestCase;
@@ -219,7 +218,7 @@ class WelcomeTemplateApiTest extends TestCase
 
     public function test_manager_uploads_and_clears_template_background(): void
     {
-        Storage::fake('public');
+        $this->fakeMediaDisk();
         $hotel = Hotel::factory()->create();
         Sanctum::actingAs($this->staff('hotel-manager', $hotel));
 

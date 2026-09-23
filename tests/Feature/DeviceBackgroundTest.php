@@ -10,7 +10,6 @@ use App\Models\MediaAsset;
 use App\Models\Room;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\CreatesStaff;
 use Tests\TestCase;
@@ -44,7 +43,7 @@ class DeviceBackgroundTest extends TestCase
             ->assertJsonPath('data.background_url', 'https://youtu.be/jfKfPfyJRdk')
             ->assertJsonPath('data.background_kind', 'video');
 
-        Storage::fake('public');
+        $this->fakeMediaDisk();
         $rightUrl = $this->post("/api/cms/hotels/{$hotel->id}/devices/{$right->id}/media", [
             'file' => UploadedFile::fake()->image('right.jpg', 80, 80),
         ], ['Accept' => 'application/json'])

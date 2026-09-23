@@ -11,7 +11,6 @@ use App\Models\Hotel;
 use App\Models\HotelWelcomeTemplate;
 use App\Models\MediaAsset;
 use App\Models\Room;
-use Illuminate\Support\Facades\Storage;
 
 class HotelBrandingService
 {
@@ -123,10 +122,7 @@ class HotelBrandingService
             return;
         }
 
-        if ($asset->disk === 'public') {
-            Storage::disk('public')->delete($asset->path);
-        }
-
+        app(MediaStore::class)->delete($asset);
         $asset->delete();
     }
 
