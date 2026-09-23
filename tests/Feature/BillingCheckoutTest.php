@@ -119,9 +119,22 @@ class BillingCheckoutTest extends TestCase
         $this->getJson('/api/cms/billing/orders/'.$code)->assertOk()->assertJsonPath('order_code', $code);
         $this->postJson('/api/cms/billing/checkout', [
             'email' => 'poll-limit@hotel.test',
+            'plan' => HotelPlan::PREMIUM,
+            'method' => 'bank',
+        ])->assertCreated();
+    }
+
+    public function test_stripe_checkout_is_disabled(): void
+    {
+        $this->postJson('/api/cms/waitlist', ['email' => 'card-off@hotel.test'])->assertCreated();
+
+        $this->postJson('/api/cms/billing/checkout', [
+            'email' => 'card-off@hotel.test',
             'plan' => HotelPlan::STANDARD,
             'method' => 'stripe',
-        ])->assertCreated();
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['method']);
     }
 
     public function test_matching_bank_credit_marks_paid_extends_month_and_notifies_telegram(): void
@@ -196,6 +209,7 @@ class BillingCheckoutTest extends TestCase
 
     public function test_stripe_checkout_returns_hosted_url_and_webhook_pays_premium(): void
     {
+        config(['services.stripe.enabled' => true]);
         $this->postJson('/api/cms/waitlist', ['email' => 'card@hotel.test', 'hotel_name' => 'Harbor'])->assertCreated();
 
         $res = $this->postJson('/api/cms/billing/checkout', [
@@ -235,6 +249,7 @@ class BillingCheckoutTest extends TestCase
 
     public function test_stripe_order_show_syncs_paid_session_without_webhook(): void
     {
+        config(['services.stripe.enabled' => true]);
         $this->postJson('/api/cms/waitlist', ['email' => 'poll@hotel.test'])->assertCreated();
         $created = $this->postJson('/api/cms/billing/checkout', [
             'email' => 'poll@hotel.test',

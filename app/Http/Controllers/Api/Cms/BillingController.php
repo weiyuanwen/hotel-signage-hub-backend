@@ -18,7 +18,7 @@ class BillingController extends Controller
             'email' => ['required', 'email', 'max:255'],
             'hotel_name' => ['nullable', 'string', 'max:255'],
             'plan' => ['required', 'string', Rule::in([HotelPlan::STANDARD, HotelPlan::PREMIUM])],
-            'method' => ['required', 'string', Rule::in(['bank', 'stripe'])],
+            'method' => ['required', 'string', Rule::in(config('services.stripe.enabled') ? ['bank', 'stripe'] : ['bank'])],
             'locale' => ['nullable', 'string', 'max:8'],
         ]);
 

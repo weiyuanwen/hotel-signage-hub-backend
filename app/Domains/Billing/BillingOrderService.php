@@ -29,8 +29,11 @@ class BillingOrderService
         if (! HotelPlan::isPaid($plan)) {
             throw ValidationException::withMessages(['plan' => 'Chọn gói 3 TV hoặc nhiều TV.']);
         }
+        if ($method === 'stripe' && ! config('services.stripe.enabled')) {
+            throw ValidationException::withMessages(['method' => 'Tạm thời chỉ nhận chuyển khoản Việt Nam.']);
+        }
         if (! in_array($method, ['bank', 'stripe'], true)) {
-            throw ValidationException::withMessages(['method' => 'Chọn chuyển khoản hoặc Stripe.']);
+            throw ValidationException::withMessages(['method' => 'Chọn chuyển khoản Việt Nam.']);
         }
 
         $user = User::query()->where('email', $email)->first();
