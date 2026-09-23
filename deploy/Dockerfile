@@ -48,6 +48,7 @@ COPY deploy/entrypoint.sh /entrypoint.sh
 RUN rm -f /etc/nginx/sites-enabled/default \
     && ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default \
     && chmod +x /entrypoint.sh \
+    && chmod -R a+rX /var/www/html \
     && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 80

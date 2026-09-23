@@ -7,6 +7,7 @@ set -euo pipefail
 HOME_DIR="${HOME}"
 LOCK="${SIGNAGEHUB_DEPLOY_LOCK:-/tmp/signagehub-deploy.lock}"
 OWNER="weiyuanwen"
+umask 022
 
 exec 9>"$LOCK"
 flock 9
@@ -33,6 +34,7 @@ clone_or_update() {
     echo "$(date -Is) $name $local_sha -> $remote_sha"
     git -C "$dir" checkout -q main
     git -C "$dir" reset --hard origin/main
+    chmod -R a+rX "$dir"
     return 0
 }
 
