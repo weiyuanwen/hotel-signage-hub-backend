@@ -56,7 +56,7 @@ return [
 
     'cms_url' => env('CMS_URL', 'http://localhost:3000'),
 
-    'player_url' => env('PLAYER_URL', 'http://localhost:5173'),
+    'player_url' => env('PLAYER_URL', 'https://app.signagehub.online'),
 
     /*
     |--------------------------------------------------------------------------

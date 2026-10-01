@@ -124,6 +124,10 @@ class HotelController extends Controller
             'background_kind' => $background?->type === 'video' ? 'video' : ($background ? 'image' : null),
             'wifi_ssid' => $hotel->wifi_ssid,
             'wifi_password' => $hotel->wifi_password,
+            // Where the front desk should point a TV to start pairing. Sourced
+            // from the same config that builds the pairing link, so the address
+            // the desk shows and the address the link opens can never drift.
+            'player_url' => rtrim((string) config('app.player_url'), '/'),
         ];
     }
 }
