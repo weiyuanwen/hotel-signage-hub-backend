@@ -406,4 +406,44 @@ class StayAndScreenDataTest extends TestCase
             ->assertJsonPath('media.kind', 'video')
             ->assertJsonPath('media.background_url', 'https://youtu.be/room-loop');
     }
+
+    public function test_manager_can_update_and_delete_room_with_stays_and_paired_devices(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $room = Room::factory()->create(['hotel_id' => $hotel->id, 'code' => '101', 'kind' => 'guest']);
+        $device = Device::factory()->paired($hotel, $room)->create();
+        $receptionist = $this->staff('receptionist', $hotel);
+        $manager = $this->staff('hotel-manager', $hotel);
+
+        Sanctum::actingAs($receptionist);
+        $this->postJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}/check-in", [
+            'guest_display_name' => 'Tran Minh',
+        ])->assertCreated();
+
+        $this->patchJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}", [
+            'code' => '102',
+        ])->assertForbidden();
+
+        $this->deleteJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}")
+            ->assertForbidden();
+
+        Sanctum::actingAs($manager);
+        $this->patchJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}", [
+            'code' => '102',
+            'name' => 'Ocean Suite',
+            'kind' => 'public',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.code', '102')
+            ->assertJsonPath('data.name', 'Ocean Suite')
+            ->assertJsonPath('data.kind', 'public');
+
+        $this->deleteJson("/api/cms/hotels/{$hotel->id}/rooms/{$room->id}")
+            ->assertOk()
+            ->assertJsonPath('data.deleted', true);
+
+        $this->assertDatabaseMissing('rooms', ['id' => $room->id]);
+        $this->assertSame('revoked', $device->fresh()->status);
+        $this->assertNull($device->fresh()->room_id);
+    }
 }

@@ -40,6 +40,8 @@ Route::prefix('cms')->group(function () {
             Route::delete('media/{purpose}', [HotelMediaController::class, 'destroy'])->whereIn('purpose', ['logo', 'background']);
             Route::get('rooms', [RoomController::class, 'index']);
             Route::post('rooms', [RoomController::class, 'store']);
+            Route::patch('rooms/{room}', [RoomController::class, 'update']);
+            Route::delete('rooms/{room}', [RoomController::class, 'destroy']);
             Route::post('rooms/{room}/media', [RoomMediaController::class, 'store']);
             Route::delete('rooms/{room}/media', [RoomMediaController::class, 'destroy']);
             Route::get('welcome-templates', [WelcomeTemplateController::class, 'index']);
